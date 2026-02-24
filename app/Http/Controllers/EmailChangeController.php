@@ -6,6 +6,7 @@ use App\Models\EmailChangeVerification;
 use App\Notifications\EmailChangeVerification as EmailChangeVerificationNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
@@ -16,20 +17,16 @@ class EmailChangeController extends Controller
      */
     public function sendVerification(Request $request)
     {
-        // Strict email validation with TLD check
         $request->validate([
             'email' => [
                 'required',
                 'email',
                 'max:255',
-                // Only accept common TLDs (this will reject .co and other uncommon TLDs)
-                'regex:/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.(com|org|net|edu|gov|io|ai|app|dev|tech|info|ph|uk|us|ca|au|de|fr|it|es|nl|jp|cn|in|br|ru|kr|mx|id|tr|za|se|no|dk|fi|pl|be|at|ch|cz|gr|pt|nz|sg|hk|my|th|vn|pk|bd|ng|eg|sa|ae|il|cl|pe|ar|ve|ua|ro|hu|ie|sk|biz|me|tv|asia|mil|int)$/i',
                 'unique:users,email,' . $request->user()->id,
             ],
         ], [
             'email.required' => 'Email address is required.',
             'email.email' => 'Please enter a valid email address.',
-            'email.regex' => 'Please enter a valid email address with a recognized domain extension (e.g., .com, .org, .net). The extension you provided is not supported.',
             'email.unique' => 'This email address is already in use.',
         ]);
 
@@ -46,8 +43,9 @@ class EmailChangeController extends Controller
             'expires_at' => Carbon::now()->addMinutes(60),
         ]);
 
-        // Send verification email to the NEW email address
-        $request->user()->notify(new EmailChangeVerificationNotification($token, $request->email));
+        // Send verification email directly to the NEW email address
+        Notification::route('mail', $request->email)
+            ->notify(new EmailChangeVerificationNotification($token, $request->email, $request->user()->name));
 
         return back()->with('status', 'verification-link-sent');
     }

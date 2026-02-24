@@ -6,7 +6,7 @@
         <h1 class="page-title">Notifications</h1>
         <p class="page-subtitle">Stay updated with your document activities</p>
     </div>
-    @if(auth()->user()->unreadNotifications->count() > 0)
+    @if($unreadCount > 0)
         <form action="{{ route('notifications.read-all') }}" method="POST">
             @csrf
             <button type="submit" class="btn-primary-modern inline-flex items-center gap-2">
@@ -109,7 +109,7 @@
                                 </svg>
                             </div>
                             <div>
-                                <p class="text-2xl font-bold text-slate-900">{{ auth()->user()->notifications->count() }}</p>
+                                <p class="text-2xl font-bold text-slate-900">{{ $totalCount }}</p>
                                 <p class="text-sm text-slate-500">Total</p>
                             </div>
                         </div>
@@ -123,7 +123,7 @@
                                 </svg>
                             </div>
                             <div>
-                                <p class="text-2xl font-bold text-slate-900">{{ auth()->user()->unreadNotifications->count() }}</p>
+                                <p class="text-2xl font-bold text-slate-900">{{ $unreadCount }}</p>
                                 <p class="text-sm text-slate-500">Unread</p>
                             </div>
                         </div>
@@ -137,7 +137,7 @@
                                 </svg>
                             </div>
                             <div>
-                                <p class="text-2xl font-bold text-slate-900">{{ auth()->user()->notifications->where('read_at', '!=', null)->count() }}</p>
+                                <p class="text-2xl font-bold text-slate-900">{{ $readCount }}</p>
                                 <p class="text-sm text-slate-500">Read</p>
                             </div>
                         </div>
@@ -232,12 +232,6 @@
                                                 break;
                                             case 'document_forwarded':
                                                 $iconClass = 'fa-share';
-                                                $iconColor = 'text-orange-600';
-                                                $bgColor = 'bg-orange-100';
-                                                $ringColor = 'ring-orange-500/20';
-                                                break;
-                                            case 'document_moving':
-                                                $iconClass = 'fa-exchange-alt';
                                                 $iconColor = 'text-purple-600';
                                                 $bgColor = 'bg-purple-100';
                                                 $ringColor = 'ring-purple-500/20';
@@ -368,37 +362,37 @@
                                     
                                     <!-- Forward Details Card (for document_forwarded type) -->
                                     @if($notification->data['type'] === 'document_forwarded')
-                                        <div class="mt-3 p-4 bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200 rounded-xl">
+                                        <div class="mt-3 p-4 bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-xl">
                                             <div class="flex items-start gap-3">
-                                                <svg class="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <svg class="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                                                 </svg>
                                                 <div class="flex-1">
                                                     @if(isset($notification->data['from_unit']) && isset($notification->data['to_unit']))
-                                                        <p class="text-sm font-semibold text-orange-900 mb-2">Document Route</p>
+                                                        <p class="text-sm font-semibold text-purple-900 mb-2">Document Route</p>
                                                         <div class="flex items-center gap-2 text-sm mb-2">
-                                                            <span class="px-2.5 py-1 bg-white rounded-lg font-medium text-orange-900 border border-orange-200">
+                                                            <span class="px-2.5 py-1 bg-white rounded-lg font-medium text-purple-900 border border-purple-200">
                                                                 {{ $notification->data['from_unit'] }}
                                                             </span>
-                                                            <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                                             </svg>
-                                                            <span class="px-2.5 py-1 bg-white rounded-lg font-medium text-orange-900 border border-orange-200">
+                                                            <span class="px-2.5 py-1 bg-white rounded-lg font-medium text-purple-900 border border-purple-200">
                                                                 {{ $notification->data['to_unit'] }}
                                                             </span>
                                                         </div>
                                                     @endif
                                                     
                                                     @if(isset($notification->data['forwarded_by']))
-                                                        <p class="text-xs text-orange-700 mb-2">
+                                                        <p class="text-xs text-purple-700 mb-2">
                                                             Forwarded by: <span class="font-semibold">{{ $notification->data['forwarded_by'] }}</span>
                                                         </p>
                                                     @endif
                                                     
                                                     @if(isset($notification->data['notes']) && $notification->data['notes'])
-                                                        <div class="mt-2 pt-2 border-t border-orange-200">
-                                                            <p class="text-sm font-semibold text-orange-900 mb-1">Forwarding Notes</p>
-                                                            <p class="text-sm text-orange-800">{{ $notification->data['notes'] }}</p>
+                                                        <div class="mt-2 pt-2 border-t border-purple-200">
+                                                            <p class="text-sm font-semibold text-purple-900 mb-1">Forwarding Notes</p>
+                                                            <p class="text-sm text-purple-800">{{ $notification->data['notes'] }}</p>
                                                         </div>
                                                     @endif
                                                 </div>
@@ -406,42 +400,6 @@
                                         </div>
                                     @endif
 
-                                    <!-- Movement Details Card (shows from/to units for document_moving) -->
-                                    @if($notification->data['type'] === 'document_moving' && isset($notification->data['from_unit']) && isset($notification->data['to_unit']))
-                                        <div class="mt-3 p-4 bg-gradient-to-br from-indigo-50 to-indigo-100/50 border border-indigo-200 rounded-xl">
-                                            <div class="flex items-start gap-3">
-                                                <svg class="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                                                </svg>
-                                                <div class="flex-1">
-                                                    <p class="text-sm font-semibold text-indigo-900 mb-2">Document Route</p>
-                                                    <div class="flex items-center gap-2 text-sm mb-2">
-                                                        <span class="px-2.5 py-1 bg-white rounded-lg font-medium text-indigo-900 border border-indigo-200">
-                                                            {{ $notification->data['from_unit'] }}
-                                                        </span>
-                                                        <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                                        </svg>
-                                                        <span class="px-2.5 py-1 bg-white rounded-lg font-medium text-indigo-900 border border-indigo-200">
-                                                            {{ $notification->data['to_unit'] }}
-                                                        </span>
-                                                    </div>
-                                                    @if(isset($notification->data['forwarded_by']))
-                                                        <p class="text-xs text-indigo-700 mb-2">
-                                                            Forwarded by: <span class="font-semibold">{{ $notification->data['forwarded_by'] }}</span>
-                                                        </p>
-                                                    @endif
-                                                    
-                                                    @if(isset($notification->data['notes']) && $notification->data['notes'])
-                                                        <div class="mt-2 pt-2 border-t border-indigo-200">
-                                                            <p class="text-sm font-semibold text-indigo-900 mb-1">Forwarding Notes</p>
-                                                            <p class="text-sm text-indigo-800">{{ $notification->data['notes'] }}</p>
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endif
                                 </div>
                             </div>
                         </div>

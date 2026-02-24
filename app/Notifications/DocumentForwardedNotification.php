@@ -15,13 +15,11 @@ class DocumentForwardedNotification extends Notification implements ShouldQueue
 
     protected $document;
     protected $forwardHistory;
-    protected $isOriginalSender;
 
-    public function __construct(Document $document, DocumentForwardHistory $forwardHistory, bool $isOriginalSender = false)
+    public function __construct(Document $document, DocumentForwardHistory $forwardHistory)
     {
         $this->document = $document;
         $this->forwardHistory = $forwardHistory;
-        $this->isOriginalSender = $isOriginalSender;
     }
 
     /**
@@ -38,16 +36,11 @@ class DocumentForwardedNotification extends Notification implements ShouldQueue
     public function toMail($notifiable)
     {
         return (new MailMessage)
-            ->subject(
-                $this->isOriginalSender 
-                    ? 'Your Document is Being Forwarded - ' . $this->document->document_number
-                    : 'Document Forwarded to Your Unit - ' . $this->document->document_number
-            )
+            ->subject('Document Forwarded to Your Unit - ' . $this->document->document_number)
             ->view('emails.document-forwarded', [
                 'document' => $this->document,
                 'user' => $notifiable,
                 'forwardHistory' => $this->forwardHistory,
-                'isOriginalSender' => $this->isOriginalSender
             ]);
     }
 
@@ -56,22 +49,6 @@ class DocumentForwardedNotification extends Notification implements ShouldQueue
      */
     public function toArray($notifiable)
     {
-        if ($this->isOriginalSender) {
-            return [
-                'document_id' => $this->document->id,
-                'document_number' => $this->document->document_number,
-                'title' => $this->document->title,
-                'type' => 'document_forwarded',
-                'message' => 'Your document is being forwarded from ' . $this->forwardHistory->fromUnit->name . ' to ' . $this->forwardHistory->toUnit->name,
-                'from_unit' => $this->forwardHistory->fromUnit->name,
-                'to_unit' => $this->forwardHistory->toUnit->name,
-                'forwarded_by' => $this->forwardHistory->forwardedBy->name,
-                'notes' => $this->forwardHistory->notes,
-                'url' => route('track.index'),
-                'is_original_sender' => true,
-            ];
-        }
-
         return [
             'document_id' => $this->document->id,
             'document_number' => $this->document->document_number,
@@ -83,7 +60,6 @@ class DocumentForwardedNotification extends Notification implements ShouldQueue
             'forwarded_by' => $this->forwardHistory->forwardedBy->name,
             'notes' => $this->forwardHistory->notes,
             'url' => route('documents.view', $this->document->id),
-            'is_original_sender' => false,
         ];
     }
 }

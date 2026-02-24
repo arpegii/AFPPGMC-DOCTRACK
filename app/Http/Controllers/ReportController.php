@@ -18,28 +18,56 @@ class ReportController extends Controller
 {
     public function generate(Request $request)
     {
-        $request->validate([
+        $data = $this->resolveReportData($request);
+        $format = $data['format'];
+
+        if ($format === 'pdf') {
+            return $this->generatePDF($data['documents'], $data['startDate'], $data['endDate'], $data['statusFilter']);
+        } else {
+            return $this->generateExcel($data['documents'], $data['startDate'], $data['endDate'], $data['statusFilter']);
+        }
+    }
+
+    private function resolveReportData(Request $request): array
+    {
+        $rules = [
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'status_filter' => 'required|in:all,received,incoming,rejected',
-            'format' => 'required|in:pdf,excel'
-        ]);
+            'format' => 'required|in:pdf,excel',
+        ];
 
-        $startDate = Carbon::parse($request->start_date)->startOfDay();
-        $endDate = Carbon::parse($request->end_date)->endOfDay();
-        $statusFilter = $request->status_filter;
-        $format = $request->format;
+        $validated = $request->validate($rules);
 
-        // Query documents based on filters.
+        $startDate = Carbon::parse($validated['start_date'])->startOfDay();
+        $endDate = Carbon::parse($validated['end_date'])->endOfDay();
+        $statusFilter = $validated['status_filter'];
+        $format = $validated['format'];
+
+        $documents = $this->buildDocumentsQuery($startDate, $endDate, $statusFilter)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'statusFilter' => $statusFilter,
+            'format' => $format,
+            'documents' => $documents,
+            'analytics' => $this->buildAnalytics($documents, $startDate, $endDate),
+        ];
+    }
+
+    private function buildDocumentsQuery(Carbon $startDate, Carbon $endDate, string $statusFilter)
+    {
         $user = auth()->user();
-
         $query = Document::with(['senderUnit', 'receivingUnit'])
             ->whereBetween('created_at', [$startDate, $endDate]);
 
         if (!$user->isAdmin()) {
-            $query->where(function($q) use ($user) {
+            $query->where(function ($q) use ($user) {
                 $q->where('sender_unit_id', $user->unit_id)
-                  ->orWhere('receiving_unit_id', $user->unit_id);
+                    ->orWhere('receiving_unit_id', $user->unit_id);
             });
         }
 
@@ -47,14 +75,7 @@ class ReportController extends Controller
             $query->where('status', $statusFilter);
         }
 
-        $documents = $query->orderBy('created_at', 'desc')->get();
-
-        // Generate report based on format
-        if ($format === 'pdf') {
-            return $this->generatePDF($documents, $startDate, $endDate, $statusFilter);
-        } else {
-            return $this->generateExcel($documents, $startDate, $endDate, $statusFilter);
-        }
+        return $query;
     }
 
     private function getStatusDisplay($status)
@@ -78,8 +99,40 @@ class ReportController extends Controller
         return $filterMap[$filter] ?? $filter;
     }
 
+    private function buildAnalytics($documents, $startDate, $endDate): array
+    {
+        $total = $documents->count();
+        $incoming = $documents->where('status', 'incoming')->count();
+        $received = $documents->where('status', 'received')->count();
+        $rejected = $documents->where('status', 'rejected')->count();
+
+        $days = max(1, $startDate->copy()->startOfDay()->diffInDays($endDate->copy()->endOfDay()) + 1);
+        $avgPerDay = round($total / $days, 2);
+        $receivedRate = $total > 0 ? round(($received / $total) * 100, 2) : 0;
+        $rejectedRate = $total > 0 ? round(($rejected / $total) * 100, 2) : 0;
+
+        $topTypes = $documents
+            ->groupBy('document_type')
+            ->map(fn($items) => $items->count())
+            ->sortDesc()
+            ->take(5);
+
+        return [
+            'total' => $total,
+            'incoming' => $incoming,
+            'received' => $received,
+            'rejected' => $rejected,
+            'avg_per_day' => $avgPerDay,
+            'received_rate' => $receivedRate,
+            'rejected_rate' => $rejectedRate,
+            'top_types' => $topTypes,
+        ];
+    }
+
     private function generatePDF($documents, $startDate, $endDate, $statusFilter)
     {
+        $analytics = $this->buildAnalytics($documents, $startDate, $endDate);
+
         // Create new PDF document (Landscape)
         $pdf = new TCPDF('L', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 
@@ -99,6 +152,8 @@ class ReportController extends Controller
 
         // Add a page
         $pdf->AddPage();
+        $margins = $pdf->getMargins();
+        $contentWidth = $pdf->getPageWidth() - $margins['left'] - $margins['right'];
 
         // Set font
         $pdf->SetFont('helvetica', '', 10);
@@ -145,7 +200,34 @@ class ReportController extends Controller
         $pdf->Cell(40, 6, 'Total Documents:', 0, 0, 'L');
         $pdf->SetFont('helvetica', '', 10);
         $pdf->SetTextColor(107, 114, 128);
-        $pdf->Cell(0, 6, count($documents), 0, 1, 'L');
+        $pdf->Cell(0, 6, $analytics['total'], 0, 1, 'L');
+        $pdf->Ln(3);
+
+        // Analytics Summary
+        $pdf->SetFont('helvetica', 'B', 11);
+        $pdf->SetTextColor(11, 31, 58);
+        $pdf->Cell(0, 7, 'Analytics Summary', 0, 1, 'L');
+
+        $pdf->SetFont('helvetica', '', 9);
+        $pdf->SetTextColor(55, 65, 81);
+        $metricWidth = $contentWidth / 5;
+        $pdf->SetFillColor(248, 250, 252);
+        $pdf->Cell($metricWidth, 8, 'Pending: ' . $analytics['incoming'], 1, 0, 'C', true);
+        $pdf->Cell($metricWidth, 8, 'Received: ' . $analytics['received'], 1, 0, 'C', true);
+        $pdf->Cell($metricWidth, 8, 'Rejected: ' . $analytics['rejected'], 1, 0, 'C', true);
+        $pdf->Cell($metricWidth, 8, 'Received Rate: ' . $analytics['received_rate'] . '%', 1, 0, 'C', true);
+        $pdf->Cell($metricWidth, 8, 'Avg/Day: ' . $analytics['avg_per_day'], 1, 1, 'C', true);
+
+        $topTypesLabel = 'Top Types: ';
+        if ($analytics['top_types']->isEmpty()) {
+            $topTypesLabel .= 'N/A';
+        } else {
+            $topTypesLabel .= $analytics['top_types']
+                ->map(fn($count, $type) => "{$type} ({$count})")
+                ->implode(', ');
+        }
+        $pdf->SetFillColor(255, 255, 255);
+        $pdf->Cell($contentWidth, 8, $topTypesLabel, 1, 1, 'L', true);
         $pdf->Ln(5);
 
         // Table Header
@@ -244,11 +326,13 @@ class ReportController extends Controller
         $filename = 'document_report_' . now()->format('Y-m-d') . '.pdf';
         return response($pdf->Output($filename, 'S'))
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+            ->header('Content-Disposition', 'inline; filename="' . $filename . '"');
     }
 
     private function generateExcel($documents, $startDate, $endDate, $statusFilter)
     {
+        $analytics = $this->buildAnalytics($documents, $startDate, $endDate);
+
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Document Report');
@@ -298,9 +382,38 @@ class ReportController extends Controller
         $currentRow++;
 
         $sheet->setCellValue("A{$currentRow}", 'Total Documents:');
-        $sheet->setCellValue("B{$currentRow}", count($documents));
+        $sheet->setCellValue("B{$currentRow}", $analytics['total']);
         $sheet->getStyle("A{$currentRow}")->getFont()->setBold(true)->setColor(new Color('374151'));
         $sheet->getStyle("B{$currentRow}")->getFont()->setColor(new Color('6B7280'));
+        $currentRow += 2;
+
+        // Analytics block
+        $sheet->mergeCells("A{$currentRow}:H{$currentRow}");
+        $sheet->setCellValue("A{$currentRow}", 'Analytics Summary');
+        $sheet->getStyle("A{$currentRow}")->getFont()->setBold(true)->setColor(new Color('0B1F3A'));
+        $sheet->getStyle("A{$currentRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE5E7EB');
+        $currentRow++;
+
+        $sheet->setCellValue("A{$currentRow}", 'Pending');
+        $sheet->setCellValue("B{$currentRow}", $analytics['incoming']);
+        $sheet->setCellValue("C{$currentRow}", 'Received');
+        $sheet->setCellValue("D{$currentRow}", $analytics['received']);
+        $sheet->setCellValue("E{$currentRow}", 'Rejected');
+        $sheet->setCellValue("F{$currentRow}", $analytics['rejected']);
+        $sheet->setCellValue("G{$currentRow}", 'Received %');
+        $sheet->setCellValue("H{$currentRow}", $analytics['received_rate'] . '%');
+        $sheet->getStyle("A{$currentRow}:H{$currentRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->setColor(new Color('D1D5DB'));
+        $currentRow++;
+
+        $sheet->setCellValue("A{$currentRow}", 'Avg per day');
+        $sheet->setCellValue("B{$currentRow}", $analytics['avg_per_day']);
+        $topTypesText = $analytics['top_types']->isEmpty()
+            ? 'N/A'
+            : $analytics['top_types']->map(fn($count, $type) => "{$type} ({$count})")->implode(', ');
+        $sheet->mergeCells("C{$currentRow}:H{$currentRow}");
+        $sheet->setCellValue("C{$currentRow}", 'Top Types: ' . $topTypesText);
+        $sheet->getStyle("A{$currentRow}:H{$currentRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->setColor(new Color('D1D5DB'));
+        $sheet->getStyle("C{$currentRow}")->getAlignment()->setWrapText(true);
         $currentRow += 2;
 
         // Table Headers

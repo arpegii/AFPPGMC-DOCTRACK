@@ -14,9 +14,23 @@ class NotificationController extends Controller
     {
         $notifications = Auth::user()
             ->notifications()
+            ->where('data->type', '!=', 'document_moving')
             ->paginate(20);
 
-        return view('notifications.index', compact('notifications'));
+        $totalCount = Auth::user()
+            ->notifications()
+            ->where('data->type', '!=', 'document_moving')
+            ->count();
+
+        $unreadCount = Auth::user()
+            ->notifications()
+            ->whereNull('read_at')
+            ->where('data->type', '!=', 'document_moving')
+            ->count();
+
+        $readCount = max(0, $totalCount - $unreadCount);
+
+        return view('notifications.index', compact('notifications', 'totalCount', 'unreadCount', 'readCount'));
     }
 
     /**
@@ -24,7 +38,11 @@ class NotificationController extends Controller
      */
     public function unreadCount()
     {
-        $count = Auth::user()->unreadNotifications->count();
+        $count = Auth::user()
+            ->notifications()
+            ->whereNull('read_at')
+            ->where('data->type', '!=', 'document_moving')
+            ->count();
         
         return response()->json(['count' => $count]);
     }
@@ -57,7 +75,11 @@ class NotificationController extends Controller
      */
     public function markAllAsRead()
     {
-        Auth::user()->unreadNotifications->markAsRead();
+        Auth::user()
+            ->notifications()
+            ->whereNull('read_at')
+            ->where('data->type', '!=', 'document_moving')
+            ->update(['read_at' => now()]);
 
         return back()->with('success', 'All notifications marked as read!');
     }
@@ -73,7 +95,10 @@ class NotificationController extends Controller
             'notification_ids.*' => ['required', 'string'],
         ]);
 
-        $query = Auth::user()->notifications()->whereNull('read_at');
+        $query = Auth::user()
+            ->notifications()
+            ->whereNull('read_at')
+            ->where('data->type', '!=', 'document_moving');
 
         if (empty($data['apply_to_all'])) {
             $query->whereIn('id', $data['notification_ids']);
@@ -109,7 +134,9 @@ class NotificationController extends Controller
             'notification_ids.*' => ['required', 'string'],
         ]);
 
-        $query = Auth::user()->notifications();
+        $query = Auth::user()
+            ->notifications()
+            ->where('data->type', '!=', 'document_moving');
 
         if (empty($data['apply_to_all'])) {
             $query->whereIn('id', $data['notification_ids']);

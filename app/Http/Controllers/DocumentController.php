@@ -10,7 +10,6 @@ use App\Notifications\DocumentSentNotification;
 use App\Notifications\DocumentReceivedNotification;
 use App\Notifications\DocumentRejectedNotification;
 use App\Notifications\DocumentForwardedNotification;
-use App\Notifications\DocumentMovingNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -212,6 +211,10 @@ class DocumentController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
+        $request->validate([
+            'rejection_reason' => 'nullable|string|max:1000',
+        ]);
+
         /** @var Document $document */
         $document = Document::findOrFail($id);
 
@@ -290,26 +293,24 @@ class DocumentController extends Controller
             $document->load(['senderUnit', 'receivingUnit', 'creator']);
             $forwardHistory->load(['fromUnit', 'toUnit', 'forwardedBy']);
 
-            // Notify all users in the receiving unit (destination)
+            DB::commit();
+
+            // Notify all users in the receiving unit (destination) after commit
             $receivingUnitUsers = User::where('unit_id', $request->forward_to_unit_id)
                 ->whereNotNull('email')
                 ->get();
 
-            if ($receivingUnitUsers->count() > 0) {
-                foreach ($receivingUnitUsers as $receivingUser) {
+            foreach ($receivingUnitUsers as $receivingUser) {
+                try {
                     $receivingUser->notify(new DocumentForwardedNotification($document, $forwardHistory));
+                } catch (\Throwable $notifyException) {
+                    Log::warning('Failed to send forwarded notification', [
+                        'document_id' => $document->id,
+                        'receiving_user_id' => $receivingUser->id,
+                        'error' => $notifyException->getMessage(),
+                    ]);
                 }
             }
-
-            // Notify the original sender (creator) that their document is moving
-            // Only notify if the creator exists, has email, and is not the one forwarding
-            if ($document->creator && 
-                $document->creator->email && 
-                $document->creator->id !== $user->id) {
-                $document->creator->notify(new DocumentMovingNotification($document, $forwardHistory));
-            }
-
-            DB::commit();
 
             return redirect()->back()->with('success', 'Document forwarded successfully!');
 

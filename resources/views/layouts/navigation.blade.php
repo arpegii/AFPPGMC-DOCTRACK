@@ -67,6 +67,11 @@
 
             <!-- RIGHT: Notifications + Profile Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:gap-3">
+                @php
+                    $visibleUnreadNotifications = auth()->user()->unreadNotifications
+                        ->filter(fn($notification) => ($notification->data['type'] ?? null) !== 'document_moving')
+                        ->values();
+                @endphp
                 
                 <!-- Notification Bell Dropdown -->
                 <div x-data="{ notificationOpen: false }" class="relative">
@@ -79,9 +84,9 @@
                             <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                 <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            @if(auth()->user()->unreadNotifications->count() > 0)
+                            @if($visibleUnreadNotifications->count() > 0)
                                 <span class="absolute -top-2 -right-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1 text-xs font-bold text-white bg-red-600 rounded-full border-2 border-white shadow-sm">
-                                    {{ auth()->user()->unreadNotifications->count() }}
+                                    {{ $visibleUnreadNotifications->count() }}
                                 </span>
                             @endif
                         </div>
@@ -111,7 +116,7 @@
 
 <!-- Notification List -->
 <div class="max-h-96 overflow-y-auto bg-slate-50 modern-scrollbar">
-    @forelse(auth()->user()->unreadNotifications->take(5) as $notification)
+    @forelse($visibleUnreadNotifications->take(5) as $notification)
         <div class="block px-5 py-4 bg-white border-b border-slate-100">
             <div class="flex items-start gap-3">
                 <!-- Notification Icon -->
@@ -140,7 +145,7 @@
                             case 'document_forwarded':
                                 $iconClass = 'fa-share';
                                 $iconColor = 'text-white';
-                                $bgColor = 'bg-orange-500';
+                                $bgColor = 'bg-purple-500';
                                 break;
                             case 'document_overdue':
                                 $iconClass = 'fa-exclamation-triangle';
@@ -197,7 +202,7 @@
 </div>
 
                         <!-- Footer -->
-                        @if(auth()->user()->unreadNotifications->count() > 0)
+                        @if($visibleUnreadNotifications->count() > 0)
                             <div class="px-5 py-3 bg-white border-t border-slate-200">
                                 <form action="{{ route('notifications.read-all') }}" method="POST">
                                     @csrf
@@ -318,9 +323,9 @@
             <x-responsive-nav-link :href="route('notifications.index')" :active="request()->routeIs('notifications.*')">
                 <div class="flex items-center justify-between">
                     <span>Notifications</span>
-                    @if(auth()->user()->unreadNotifications->count() > 0)
+                    @if($visibleUnreadNotifications->count() > 0)
                         <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
-                            {{ auth()->user()->unreadNotifications->count() }}
+                            {{ $visibleUnreadNotifications->count() }}
                         </span>
                     @endif
                 </div>

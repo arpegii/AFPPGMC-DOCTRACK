@@ -8,7 +8,7 @@
             <p class="page-subtitle">Timeline of all document states and activities</p>
         </div>
             <!-- Generate Reports Button -->
-        <div x-data="{ openReportModal: false }">
+        <div x-data="{ openReportModal: false, reportFormat: 'pdf' }">
                 <button
                     @click="openReportModal = true"
                     type="button"
@@ -121,6 +121,7 @@
                                 <select
                                     name="format"
                                     required
+                                    x-model="reportFormat"
                                     class="w-full rounded-lg border border-gray-300 px-4 py-2.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm transition duration-200 hover:border-gray-400"
                                 >
                                     <option value="pdf">PDF</option>
