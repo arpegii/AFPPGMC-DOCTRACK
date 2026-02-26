@@ -5,6 +5,7 @@ use App\Models\User;
 use App\Notifications\DocumentOverdueNotification;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -13,6 +14,7 @@ Artisan::command('inspire', function () {
 
 Artisan::command('documents:notify-overdue', function () {
     $cutoff = now()->subDays(3);
+    $today = now()->toDateString();
 
     $overdueDocuments = Document::with(['senderUnit', 'receivingUnit'])
         ->where('status', 'incoming')
@@ -33,23 +35,56 @@ Artisan::command('documents:notify-overdue', function () {
         $unitUsers = User::where('unit_id', $document->receiving_unit_id)->get();
 
         foreach ($unitUsers as $user) {
-            $alreadyEmailed = $user->notifications()
-                ->where('type', DocumentOverdueNotification::class)
-                ->where('data->document_id', $document->id)
-                ->where('data->receiving_unit_id', $document->receiving_unit_id)
-                ->whereNotNull('data->email_sent_at')
-                ->exists();
+            $logQuery = DB::table('document_overdue_notification_logs')
+                ->where('document_id', $document->id)
+                ->where('user_id', $user->id)
+                ->where('receiving_unit_id', $document->receiving_unit_id);
 
-            if ($alreadyEmailed) {
+            $existingLog = $logQuery->first();
+            $alreadySentToday = $existingLog && \Illuminate\Support\Carbon::parse($existingLog->notified_at)->toDateString() === $today;
+
+            if ($alreadySentToday) {
                 continue;
             }
 
-            $user->notify(new DocumentOverdueNotification($document));
-            $sentCount++;
+            $dispatchedAt = now();
+
+            if ($existingLog) {
+                $logQuery->update([
+                    'notified_at' => $dispatchedAt,
+                    'updated_at' => $dispatchedAt,
+                ]);
+            } else {
+                DB::table('document_overdue_notification_logs')->insert([
+                    'document_id' => $document->id,
+                    'user_id' => $user->id,
+                    'receiving_unit_id' => $document->receiving_unit_id,
+                    'notified_at' => $dispatchedAt,
+                    'created_at' => $dispatchedAt,
+                    'updated_at' => $dispatchedAt,
+                ]);
+            }
+
+            try {
+                $user->notify(new DocumentOverdueNotification($document));
+                $sentCount++;
+            } catch (\Throwable $e) {
+                // Allow retry on next scheduler run if dispatch fails now.
+                if ($existingLog) {
+                    $logQuery->update([
+                        'notified_at' => $existingLog->notified_at,
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    $logQuery->delete();
+                }
+
+                throw $e;
+            }
         }
     }
 
     $this->info("Overdue notifications sent: {$sentCount}");
 })->purpose('Notify unit users of incoming documents overdue for 3+ days');
 
-Schedule::command('documents:notify-overdue')->everyMinute();
+Schedule::command('documents:notify-overdue')->everyMinute()->withoutOverlapping();
