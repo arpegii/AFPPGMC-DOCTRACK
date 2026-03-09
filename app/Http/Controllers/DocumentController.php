@@ -413,20 +413,19 @@ class DocumentController extends Controller
             $perPage = 10;
         }
         $selectedUnitId = null;
-        $filterUnits = $user->isAdmin() ? Unit::all() : collect();
+        // Make filter units available to all users
+        $filterUnits = $user->isAdmin() ? Unit::all() : Unit::visibleToUser($user);
 
-        if ($user->isAdmin()) {
-            if ($request->has('unit_id')) {
-                $selectedUnitId = $request->input('unit_id');
-
-                if ($selectedUnitId) {
-                    $request->session()->put('admin_unit_filter_id', $selectedUnitId);
-                } else {
-                    $request->session()->forget('admin_unit_filter_id');
-                }
+        // Handle unit filtering for both admins and regular users
+        if ($request->has('unit_id')) {
+            $selectedUnitId = $request->input('unit_id');
+            if ($selectedUnitId) {
+                $request->session()->put('unit_filter_id', $selectedUnitId);
             } else {
-                $selectedUnitId = $request->session()->get('admin_unit_filter_id');
+                $request->session()->forget('unit_filter_id');
             }
+        } else {
+            $selectedUnitId = $request->session()->get('unit_filter_id');
         }
 
         $forwardHistoriesQuery = DocumentForwardHistory::with([
@@ -445,14 +444,23 @@ class DocumentController extends Controller
             $query->whereNotNull('forwarded_at');
         });
 
-        if ($user->isAdmin() && $selectedUnitId) {
-            $forwardHistoriesQuery->where(function ($query) use ($selectedUnitId) {
-                $query->whereHas('document', function ($docQuery) use ($selectedUnitId) {
-                    $docQuery->where('sender_unit_id', $selectedUnitId)
-                        ->orWhere('receiving_unit_id', $selectedUnitId);
-                })->orWhere('from_unit_id', $selectedUnitId)
-                  ->orWhere('to_unit_id', $selectedUnitId);
-            });
+        if ($selectedUnitId) {
+            if ($user->isAdmin()) {
+                // For admins, filter by unit in document or forwarding history
+                $forwardHistoriesQuery->where(function ($query) use ($selectedUnitId) {
+                    $query->whereHas('document', function ($docQuery) use ($selectedUnitId) {
+                        $docQuery->where('sender_unit_id', $selectedUnitId)
+                            ->orWhere('receiving_unit_id', $selectedUnitId);
+                    })->orWhere('from_unit_id', $selectedUnitId)
+                      ->orWhere('to_unit_id', $selectedUnitId);
+                });
+            } else {
+                // For non-admins, filter by unit in forwarding history (from/to units)
+                $forwardHistoriesQuery->where(function ($query) use ($selectedUnitId) {
+                    $query->where('from_unit_id', $selectedUnitId)
+                          ->orWhere('to_unit_id', $selectedUnitId);
+                });
+            }
         }
 
         if ($searchQuery !== '') {

@@ -23,20 +23,19 @@ class ReceivedController extends Controller
             $perPage = 10;
         }
         $selectedUnitId = null;
-        $filterUnits = $user->isAdmin() ? Unit::all() : collect();
+        // Make filter units available to all users
+        $filterUnits = $user->isAdmin() ? Unit::all() : Unit::visibleToUser($user);
 
-        if ($user->isAdmin()) {
-            if ($request->has('unit_id')) {
-                $selectedUnitId = $request->input('unit_id');
-
-                if ($selectedUnitId) {
-                    $request->session()->put('admin_unit_filter_id', $selectedUnitId);
-                } else {
-                    $request->session()->forget('admin_unit_filter_id');
-                }
+        // Handle unit filtering for both admins and regular users
+        if ($request->has('unit_id')) {
+            $selectedUnitId = $request->input('unit_id');
+            if ($selectedUnitId) {
+                $request->session()->put('unit_filter_id', $selectedUnitId);
             } else {
-                $selectedUnitId = $request->session()->get('admin_unit_filter_id');
+                $request->session()->forget('unit_filter_id');
             }
+        } else {
+            $selectedUnitId = $request->session()->get('unit_filter_id');
         }
 
         // Get filtered units for CREATE document form (excludes ADMN for non-admins)
@@ -79,6 +78,11 @@ class ReceivedController extends Controller
             $query = Document::with(['senderUnit', 'receivingUnit'])
                 ->where('receiving_unit_id', $user->unit_id)
                 ->where('status', 'received');
+
+            // Apply unit filter for regular users (by sender unit)
+            if ($selectedUnitId) {
+                $query->where('sender_unit_id', $selectedUnitId);
+            }
 
             if ($searchQuery !== '') {
                 $query->where(function ($subQuery) use ($searchQuery) {
