@@ -11,8 +11,8 @@
                              alt="Company Logo"
                              class="h-9 w-auto object-contain drop-shadow-sm">
                         <div class="hidden lg:block leading-tight">
-                            <p class="text-xs uppercase tracking-[0.14em] text-slate-500">AFPPGMC</p>
-                            <p class="text-sm font-semibold text-slate-900">Document Tracker</p>
+                            <p class="text-xs uppercase tracking-[0.14em] text-slate-500">PGMC</p>
+                            <p class="text-sm font-semibold text-slate-900">Pension Services Tracking System</p>
                         </div>
                     </a>
                 </div>

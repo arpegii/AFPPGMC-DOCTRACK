@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Document;
 use App\Models\DocumentForwardHistory;
+use App\Models\DocumentType;
 use App\Models\Unit;
 use App\Models\User;
 use App\Notifications\DocumentSentNotification;
@@ -488,13 +489,15 @@ class DocumentController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
+        $documentTypes = DocumentType::orderBy('name')->get();
         $units = Unit::all();
 
         return view('forwarded.forwarded', compact(
             'forwardHistories',
             'units',
             'filterUnits',
-            'selectedUnitId'
+            'selectedUnitId',
+            'documentTypes'
         ));
     }
 }

@@ -99,11 +99,6 @@
             overflow: hidden;
         }
         
-        .logo-icon svg {
-            width: 1.5rem;
-            height: 1.5rem;
-        }
-        
         .logo-text h1 {
             font-size: 1rem;
             font-weight: 600;
@@ -143,7 +138,6 @@
             .form-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-            
             .form-group-full {
                 grid-column: 1 / -1;
             }
@@ -165,7 +159,7 @@
             color: var(--color-error);
         }
         
-        .input-field, .select-field {
+        .input-field {
             width: 100%;
             padding: 0.625rem 0.875rem;
             font-size: 0.875rem;
@@ -178,13 +172,11 @@
             font-family: inherit;
         }
         
-        .input-field:hover:not(:focus),
-        .select-field:hover:not(:focus) {
+        .input-field:hover:not(:focus) {
             border-color: var(--color-border-hover);
         }
         
-        .input-field:focus,
-        .select-field:focus {
+        .input-field:focus {
             outline: none;
             border-color: var(--color-primary);
             box-shadow: 0 0 0 1px var(--color-primary);
@@ -193,11 +185,6 @@
         .input-field::placeholder {
             color: var(--color-text-muted);
             opacity: 0.6;
-        }
-        
-        textarea.input-field {
-            resize: vertical;
-            min-height: 4.5rem;
         }
         
         .error-message {
@@ -233,13 +220,9 @@
             margin-bottom: 0.25rem;
         }
         
-        .req-item:last-child {
-            margin-bottom: 0;
-        }
+        .req-item:last-child { margin-bottom: 0; }
         
-        .req-item.met {
-            color: var(--color-success);
-        }
+        .req-item.met { color: var(--color-success); }
         
         .req-icon {
             width: 0.875rem;
@@ -258,15 +241,8 @@
             color: white;
         }
         
-        .req-icon svg {
-            width: 0.5rem;
-            height: 0.5rem;
-            display: none;
-        }
-        
-        .req-item.met .req-icon svg {
-            display: block;
-        }
+        .req-icon svg { width: 0.5rem; height: 0.5rem; display: none; }
+        .req-item.met .req-icon svg { display: block; }
         
         .link {
             color: var(--color-text);
@@ -274,10 +250,7 @@
             font-weight: 500;
             transition: color 0.15s ease;
         }
-        
-        .link:hover {
-            color: var(--color-accent);
-        }
+        .link:hover { color: var(--color-accent); }
         
         .btn {
             width: 100%;
@@ -327,19 +300,9 @@
             text-align: center;
         }
         
-        .auth-footer p {
-            font-size: 0.875rem;
-            color: var(--color-text-muted);
-        }
-        
         @media (max-width: 640px) {
-            body {
-                padding: 1rem;
-            }
-            
-            .auth-header,
-            .auth-body,
-            .auth-footer {
+            body { padding: 1rem; }
+            .auth-header, .auth-body, .auth-footer {
                 padding-left: 1.5rem;
                 padding-right: 1.5rem;
             }
@@ -349,6 +312,7 @@
 <body>
     <div class="auth-container">
         <div class="auth-card">
+
             <!-- Header -->
             <div class="auth-header">
                 <div class="logo-section">
@@ -356,7 +320,7 @@
                         <img src="images/logo.png" alt="AFPPGMC Logo" style="width: 100%; height: 100%; object-fit: contain;">
                     </div>
                     <div class="logo-text">
-                        <h1>AFPPGMC Document Tracking System</h1>
+                        <h1>PGMC Pension Services Tracking System</h1>
                         <p>Document Management</p>
                     </div>
                 </div>
@@ -370,17 +334,18 @@
                     @csrf
 
                     <div class="form-grid">
+
                         <!-- Name -->
                         <div class="form-group form-group-full">
                             <label for="name" class="form-label">
                                 Full name <span class="required">*</span>
                             </label>
-                            <input 
-                                id="name" 
-                                type="text" 
-                                name="name" 
-                                value="{{ old('name') }}" 
-                                required 
+                            <input
+                                id="name"
+                                type="text"
+                                name="name"
+                                value="{{ old('name') }}"
+                                required
                                 autofocus
                                 autocomplete="name"
                                 class="input-field"
@@ -403,11 +368,11 @@
                             <label for="email" class="form-label">
                                 Email address <span class="required">*</span>
                             </label>
-                            <input 
-                                id="email" 
-                                type="email" 
-                                name="email" 
-                                value="{{ old('email') }}" 
+                            <input
+                                id="email"
+                                type="email"
+                                name="email"
+                                value="{{ old('email') }}"
                                 required
                                 autocomplete="email"
                                 class="input-field"
@@ -425,40 +390,136 @@
                             @enderror
                         </div>
 
-<!-- Unit -->
-<div class="form-group form-group-full">
-    <label for="unit_id" class="form-label">
-        Unit <span class="required">*</span>
-    </label>
-    <select 
-        id="unit_id" 
-        name="unit_id" 
-        required
-        class="select-field"
-    >
-        <option value="">Select unit</option>
+                        <!-- Unit -->
+                        <div class="form-group form-group-full">
+                            <label class="form-label">
+                                Unit <span class="required">*</span>
+                            </label>
 
-        @foreach($units as $unit)
-            <option value="{{ $unit->id }}"
-                {{ old('unit_id') == $unit->id ? 'selected' : '' }}>
-                {{ $unit->name }}
-            </option>
-        @endforeach
+                            <div id="unit-picker" style="position: relative;">
 
-    </select>
-</div>
+                                <!-- Display button -->
+                                <button
+                                    type="button"
+                                    id="unit-picker-btn"
+                                    onclick="toggleUnitDropdown(event)"
+                                    style="
+                                        width: 100%;
+                                        padding: 0.625rem 0.875rem;
+                                        font-size: 0.875rem;
+                                        border: 1px solid var(--color-border);
+                                        border-radius: 0.25rem;
+                                        background: var(--color-bg);
+                                        color: var(--color-text-muted);
+                                        font-family: inherit;
+                                        cursor: pointer;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: space-between;
+                                        transition: all 0.15s ease;
+                                        text-align: left;
+                                    "
+                                >
+                                    <span id="unit-picker-label">Select unit</span>
+                                    <svg style="width:14px;height:14px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
 
+                                <!-- Hidden input submitted with form -->
+                                <input type="hidden" name="unit_id" id="unit_id" value="{{ old('unit_id') }}">
 
+                                @error('unit_id')
+                                    <div class="error-message">
+                                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="7" cy="7" r="6"></circle>
+                                            <line x1="7" y1="4" x2="7" y2="7"></line>
+                                            <line x1="7" y1="10" x2="7.01" y2="10"></line>
+                                        </svg>
+                                        <span>{{ $message }}</span>
+                                    </div>
+                                @enderror
+
+                                <!-- Dropdown list -->
+                                <div
+                                    id="unit-dropdown"
+                                    style="
+                                        display: none;
+                                        position: absolute;
+                                        top: calc(100% + 4px);
+                                        left: 0;
+                                        width: 100%;
+                                        background: white;
+                                        border: 1px solid #d1d5db;
+                                        border-radius: 0.5rem;
+                                        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                                        z-index: 99999;
+                                        overflow: hidden;
+                                        max-height: 260px;
+                                        overflow-y: auto;
+                                    "
+                                >
+                                    @foreach($units as $unit)
+                                        @if(in_array($unit->name, [
+                                            'Resumption NCO', 'TOP NCO', 'Restoration NCO',
+                                            'Prior Years NCO', 'Pension Differential 18-19', 'Own Right NCO',
+                                            'Posthumous NCO', 'Retirement NCO', 'RSAB NCO', 'CDD NCO'
+                                        ]))
+                                            @continue
+                                        @endif
+
+                                        @if($unit->name === 'PAU')
+                                            <div
+                                                class="reg-unit-row"
+                                                data-unit-id="{{ $unit->id }}"
+                                                data-unit-name="PAU"
+                                                data-has-flyout="pau"
+                                                style="padding:0.6rem 0.875rem; font-size:0.875rem; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:background 0.15s;"
+                                            >
+                                                <span>PAU</span>
+                                                <svg style="width:13px;height:13px;color:#9ca3af;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                                </svg>
+                                            </div>
+
+                                        @elseif($unit->name === 'BGCU')
+                                            <div
+                                                class="reg-unit-row"
+                                                data-unit-id="{{ $unit->id }}"
+                                                data-unit-name="BGCU"
+                                                data-has-flyout="bgcu"
+                                                style="padding:0.6rem 0.875rem; font-size:0.875rem; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:background 0.15s;"
+                                            >
+                                                <span>BGCU</span>
+                                                <svg style="width:13px;height:13px;color:#9ca3af;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                                </svg>
+                                            </div>
+
+                                        @else
+                                            <div
+                                                class="reg-unit-row"
+                                                data-unit-id="{{ $unit->id }}"
+                                                data-unit-name="{{ $unit->name }}"
+                                                style="padding:0.6rem 0.875rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
+                                            >
+                                                {{ $unit->name }}
+                                            </div>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Password -->
                         <div class="form-group form-group-full">
                             <label for="password" class="form-label">
                                 Password <span class="required">*</span>
                             </label>
-                            <input 
-                                id="password" 
-                                type="password" 
-                                name="password" 
+                            <input
+                                id="password"
+                                type="password"
+                                name="password"
                                 required
                                 autocomplete="new-password"
                                 class="input-field"
@@ -474,7 +535,7 @@
                                     <span>{{ $message }}</span>
                                 </div>
                             @enderror
-                            
+
                             <div class="password-requirements">
                                 <div class="req-title">Password must contain:</div>
                                 <div class="req-item" id="req-length">
@@ -517,16 +578,17 @@
                             <label for="password_confirmation" class="form-label">
                                 Confirm password <span class="required">*</span>
                             </label>
-                            <input 
-                                id="password_confirmation" 
-                                type="password" 
-                                name="password_confirmation" 
+                            <input
+                                id="password_confirmation"
+                                type="password"
+                                name="password_confirmation"
                                 required
                                 autocomplete="new-password"
                                 class="input-field"
                                 placeholder="Confirm your password"
                             >
                         </div>
+
                     </div>
 
                     <!-- Submit -->
@@ -541,55 +603,210 @@
 
                 <div class="divider">
                     <p>
-                        Already have an account? 
+                        Already have an account?
                         <a href="{{ route('login') }}" class="link">Sign in here</a>
                     </p>
                 </div>
             </div>
 
             <!-- Footer -->
-            <div class="auth-footer">
-            </div>
+            <div class="auth-footer"></div>
         </div>
     </div>
 
+    <!-- PAU Flyout — appended to body so nothing clips it -->
+    <div id="reg-pau-flyout" style="
+        display:none;
+        position:fixed;
+        width:230px;
+        background:white;
+        border:1px solid #c7dcff;
+        border-radius:0.5rem;
+        box-shadow:0 8px 24px rgba(0,0,0,0.15);
+        z-index:999999;
+        overflow:hidden;
+    ">
+        <div style="padding:0.5rem 1rem 0.4rem; font-size:0.7rem; font-weight:700; color:#1e5ba8; background:#f0f6ff; border-bottom:1px solid #c7dcff; letter-spacing:0.05em;">
+            PAU SUB-UNITS
+        </div>
+        @foreach($units as $subUnit)
+            @if(in_array($subUnit->name, [
+                'Resumption NCO', 'TOP NCO', 'Restoration NCO',
+                'Prior Years NCO', 'Pension Differential 18-19', 'Own Right NCO'
+            ]))
+                <div
+                    class="reg-flyout-item"
+                    data-unit-id="{{ $subUnit->id }}"
+                    data-unit-name="{{ $subUnit->name }}"
+                    style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
+                >
+                    {{ $subUnit->name }}
+                </div>
+            @endif
+        @endforeach
+    </div>
+
+    <!-- BGCU Flyout — appended to body so nothing clips it -->
+    <div id="reg-bgcu-flyout" style="
+        display:none;
+        position:fixed;
+        width:210px;
+        background:white;
+        border:1px solid #c7dcff;
+        border-radius:0.5rem;
+        box-shadow:0 8px 24px rgba(0,0,0,0.15);
+        z-index:999999;
+        overflow:hidden;
+    ">
+        <div style="padding:0.5rem 1rem 0.4rem; font-size:0.7rem; font-weight:700; color:#1e5ba8; background:#f0f6ff; border-bottom:1px solid #c7dcff; letter-spacing:0.05em;">
+            BGCU SUB-UNITS
+        </div>
+        @foreach($units as $subUnit)
+            @if(in_array($subUnit->name, [
+                'Posthumous NCO', 'Retirement NCO', 'RSAB NCO', 'CDD NCO'
+            ]))
+                <div
+                    class="reg-flyout-item"
+                    data-unit-id="{{ $subUnit->id }}"
+                    data-unit-name="{{ $subUnit->name }}"
+                    style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
+                >
+                    {{ $subUnit->name }}
+                </div>
+            @endif
+        @endforeach
+    </div>
+
     <script>
+        let regFlyoutTimers = {};
+
+        // ── Unit picker toggle ────────────────────────────────────────────────
+        function toggleUnitDropdown(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('unit-dropdown');
+            const isOpen   = dropdown.style.display === 'block';
+            dropdown.style.display = isOpen ? 'none' : 'block';
+            if (isOpen) {
+                hideFlyout('reg-pau-flyout');
+                hideFlyout('reg-bgcu-flyout');
+            }
+        }
+
+        function selectUnit(id, name) {
+            document.getElementById('unit_id').value = id;
+            const label       = document.getElementById('unit-picker-label');
+            label.textContent = name;
+            label.style.color = 'var(--color-text)';
+            document.getElementById('unit-dropdown').style.display = 'none';
+            hideFlyout('reg-pau-flyout');
+            hideFlyout('reg-bgcu-flyout');
+        }
+
+        function hideFlyout(id) {
+            clearTimeout(regFlyoutTimers[id]);
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        }
+
+        // ── Init ──────────────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function () {
+
+            // Move flyouts to <body> so page overflow never clips them
+            const pauFlyout  = document.getElementById('reg-pau-flyout');
+            const bgcuFlyout = document.getElementById('reg-bgcu-flyout');
+            document.body.appendChild(pauFlyout);
+            document.body.appendChild(bgcuFlyout);
+
+            // Flyout item hover + click
+            document.querySelectorAll('#reg-pau-flyout .reg-flyout-item, #reg-bgcu-flyout .reg-flyout-item').forEach(item => {
+                item.addEventListener('mouseenter', () => item.style.background = '#eff6ff');
+                item.addEventListener('mouseleave', () => item.style.background = '');
+                item.addEventListener('click', () => selectUnit(item.dataset.unitId, item.dataset.unitName));
+            });
+
+            // Keep flyout open when mouse is inside it
+            [pauFlyout, bgcuFlyout].forEach(flyout => {
+                flyout.addEventListener('mouseenter', () => clearTimeout(regFlyoutTimers[flyout.id]));
+                flyout.addEventListener('mouseleave', () => hideFlyout(flyout.id));
+            });
+
+            // Unit row hover + click
+            document.querySelectorAll('.reg-unit-row').forEach(row => {
+
+                row.addEventListener('mouseenter', () => {
+                    row.style.background = '#f3f4f6';
+                    const flyoutKey = row.dataset.hasFlyout;
+                    if (flyoutKey) {
+                        const other = flyoutKey === 'pau' ? 'bgcu' : 'pau';
+                        hideFlyout('reg-' + other + '-flyout');
+                        clearTimeout(regFlyoutTimers['reg-' + flyoutKey + '-flyout']);
+                        const rect   = row.getBoundingClientRect();
+                        const flyout = document.getElementById('reg-' + flyoutKey + '-flyout');
+                        flyout.style.top  = rect.top + 'px';
+                        flyout.style.left = (rect.right + 6) + 'px';
+                        flyout.style.display = 'block';
+                    } else {
+                        hideFlyout('reg-pau-flyout');
+                        hideFlyout('reg-bgcu-flyout');
+                    }
+                });
+
+                row.addEventListener('mouseleave', () => {
+                    row.style.background = '';
+                    const flyoutKey = row.dataset.hasFlyout;
+                    if (flyoutKey) {
+                        regFlyoutTimers['reg-' + flyoutKey + '-flyout'] = setTimeout(() => {
+                            hideFlyout('reg-' + flyoutKey + '-flyout');
+                        }, 120);
+                    }
+                });
+
+                // PAU and BGCU are clickable as units themselves
+                row.addEventListener('click', () => {
+                    selectUnit(row.dataset.unitId, row.dataset.unitName);
+                });
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function (e) {
+                const picker = document.getElementById('unit-picker');
+                if (
+                    picker && !picker.contains(e.target) &&
+                    !pauFlyout.contains(e.target) &&
+                    !bgcuFlyout.contains(e.target)
+                ) {
+                    document.getElementById('unit-dropdown').style.display = 'none';
+                    hideFlyout('reg-pau-flyout');
+                    hideFlyout('reg-bgcu-flyout');
+                }
+            });
+
+            // Restore old() value on validation error
+            const oldValue = "{{ old('unit_id') }}";
+            if (oldValue) {
+                document.querySelectorAll('.reg-unit-row').forEach(row => {
+                    if (row.dataset.unitId == oldValue) {
+                        selectUnit(row.dataset.unitId, row.dataset.unitName);
+                    }
+                });
+
+                // Also check flyout items (sub-units)
+                document.querySelectorAll('.reg-flyout-item').forEach(item => {
+                    if (item.dataset.unitId == oldValue) {
+                        selectUnit(item.dataset.unitId, item.dataset.unitName);
+                    }
+                });
+            }
+        });
+
+        // ── Password Requirements ─────────────────────────────────────────────
         const passwordInput = document.getElementById('password');
-        
-        passwordInput.addEventListener('input', function() {
+        passwordInput.addEventListener('input', function () {
             const password = this.value;
-            
-            // Check length
-            const lengthReq = document.getElementById('req-length');
-            if (password.length >= 8) {
-                lengthReq.classList.add('met');
-            } else {
-                lengthReq.classList.remove('met');
-            }
-            
-            // Check uppercase
-            const uppercaseReq = document.getElementById('req-uppercase');
-            if (/[A-Z]/.test(password)) {
-                uppercaseReq.classList.add('met');
-            } else {
-                uppercaseReq.classList.remove('met');
-            }
-            
-            // Check lowercase
-            const lowercaseReq = document.getElementById('req-lowercase');
-            if (/[a-z]/.test(password)) {
-                lowercaseReq.classList.add('met');
-            } else {
-                lowercaseReq.classList.remove('met');
-            }
-            
-            // Check number
-            const numberReq = document.getElementById('req-number');
-            if (/[0-9]/.test(password)) {
-                numberReq.classList.add('met');
-            } else {
-                numberReq.classList.remove('met');
-            }
+            document.getElementById('req-length').classList.toggle('met', password.length >= 8);
+            document.getElementById('req-uppercase').classList.toggle('met', /[A-Z]/.test(password));
+            document.getElementById('req-lowercase').classList.toggle('met', /[a-z]/.test(password));
+            document.getElementById('req-number').classList.toggle('met', /[0-9]/.test(password));
         });
     </script>
 </body>

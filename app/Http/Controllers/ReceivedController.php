@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
+use App\Models\DocumentType;
 use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,9 +41,12 @@ class ReceivedController extends Controller
 
         // Get filtered units for CREATE document form (excludes ADMN for non-admins)
         $units = Unit::visibleToUser($user);
-        
+
         // Get ALL units for FORWARD dropdown (includes ADMN for forwarding)
         $allUnits = Unit::all();
+
+        // Get all document types from the database
+        $documentTypes = DocumentType::orderBy('name')->get();
 
         if ($user->isAdmin()) {
             // Admin sees all received documents.
@@ -109,7 +113,8 @@ class ReceivedController extends Controller
             'units',
             'allUnits',
             'filterUnits',
-            'selectedUnitId'
+            'selectedUnitId',
+            'documentTypes'  // <-- added
         ));
     }
 }

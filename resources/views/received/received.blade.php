@@ -38,13 +38,12 @@
         </div>
     </form>
 </div>
+
 <!-- CENTER WRAPPER -->
 <div class="py-6">
     <div class="table-shell">
         <div class="overflow-x-auto modern-scrollbar">
             <table class="table-modern">
-
-                <!-- Table Head -->
                 <thead class="table-head border-b border-slate-200">
                     <tr>
                         <th class="px-6 py-4 text-center">#</th>
@@ -58,66 +57,41 @@
                         <th class="px-6 py-4 text-center">Actions</th>
                     </tr>
                 </thead>
-
-                <!-- Table Body -->
                 <tbody>
-
                     @forelse ($documents as $document)
                         <tr class="table-row">
-
-                            <!-- # -->
                             <td class="px-6 py-4 font-medium text-slate-700 text-center">
                                 {{ $documents->firstItem() + $loop->index }}
                             </td>
-
-                            <!-- Document No. -->
                             <td class="px-6 py-4 font-semibold text-slate-900 text-left">
                                 {{ $document->document_number }}
                             </td>
-
-                            <!-- Document Title -->
                             <td class="px-6 py-4 text-center">
                                 {{ $document->title }}
                             </td>
-
-                            <!-- Sender Unit -->
                             <td class="px-6 py-4 text-center">
                                 {{ $document->senderUnit->name ?? '-' }}
                             </td>
-
-                            <!-- Type -->
                             <td class="px-6 py-4 text-center">
                                 <span class="badge-chip bg-blue-50 text-blue-700">
                                     {{ $document->document_type }}
                                 </span>
                             </td>
-
-                            <!-- Receiving Unit -->
                             <td class="px-6 py-4 text-center">
                                 {{ $document->receivingUnit->name ?? '-' }}
                             </td>
-
-                            <!-- Status -->
                             <td class="px-6 py-4 text-center">
-                                <span class="badge-chip bg-emerald-50 text-emerald-700">
-                                    Received
-                                </span>
+                                <span class="badge-chip bg-emerald-50 text-emerald-700">Received</span>
                             </td>
-
-                            <!-- Date -->
                             <td class="px-6 py-4 text-slate-500 text-center">
                                 {{ $document->updated_at->format('M d, Y h:i A') }}
                             </td>
-
-                            <!-- Actions -->
                             <td class="px-6 py-4 text-center">
                                 <div class="flex items-center justify-center gap-2" x-data>
-
                                     <a href="{{ route('documents.view', ['id' => $document->id]) }}"
                                        class="action-btn bg-slate-100 text-slate-700 hover:bg-slate-200">
                                         Details
                                     </a>
-
                                     <button
                                         @click="window.dispatchEvent(new CustomEvent('open-forward-modal', { 
                                             detail: { 
@@ -130,10 +104,8 @@
                                         class="action-btn bg-blue-100 text-blue-700 hover:bg-blue-200">
                                         Forward
                                     </button>
-
                                 </div>
                             </td>
-
                         </tr>
                     @empty
                         <tr>
@@ -145,14 +117,11 @@
                             </td>
                         </tr>
                     @endforelse
-
                 </tbody>
             </table>
         </div>
-
         @include('partials.pagination-controls', ['paginator' => $documents])
     </div>
-
 </div>
 
 <!-- FLOATING UPLOAD BUTTON + MODAL -->
@@ -203,7 +172,7 @@
         ＋ Document
     </button>
 
-    <!-- MODAL BACKDROP + MODAL (CENTERED) -->
+    <!-- MODAL BACKDROP -->
     <div
         x-show="open"
         x-cloak
@@ -218,7 +187,7 @@
         style="background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);"
     >
 
-        <!-- MODAL CARD (PERFECTLY CENTERED - SQUARE) -->
+        <!-- MODAL CARD -->
         <div
             @click.stop
             x-transition:enter="transition ease-out duration-300"
@@ -227,7 +196,7 @@
             x-transition:leave="transition ease-in duration-200"
             x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-90"
-            class="bg-white rounded-5xl shadow-2xl overflow-y-auto"
+            class="bg-white shadow-2xl overflow-y-auto"
             style="width: 500px; max-height: 90vh; border-radius: 2rem;"
         >
 
@@ -236,7 +205,6 @@
                 <h2 class="text-l font-semibold text-gray-800 mb-0.5 px-4">
                     Upload New Document
                 </h2>
-
                 <button
                     @click="open = false"
                     type="button"
@@ -259,7 +227,7 @@
             >
             @csrf
 
-            <!-- Document Number (Auto-generated, Read-only) -->
+            <!-- Document Number -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1.5">
                     Document Number <span class="text-red-500">*</span>
@@ -289,8 +257,7 @@
                     placeholder="Enter descriptive title"
                     class="w-full rounded-lg border border-gray-300 px-4 py-2.5
                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                           outline-none text-sm transition duration-200
-                           hover:border-gray-400"
+                           outline-none text-sm transition duration-200 hover:border-gray-400"
                 >
             </div>
 
@@ -299,21 +266,95 @@
                 <label class="block text-sm font-semibold text-gray-700 mb-1.5">
                     Receiving Unit <span class="text-red-500">*</span>
                 </label>
-                <select
-                    name="receiving_unit_id"
-                    required
-                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5
-                           bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                           outline-none text-sm transition duration-200
-                           hover:border-gray-400"
-                >
-                    <option value="">Select Receiving Unit</option>
-                    @foreach($units as $unit)
-                        @if($unit->id != auth()->user()->unit_id)
-                            <option value="{{ $unit->id }}">{{ $unit->name }}</option>
-                        @endif
-                    @endforeach
-                </select>
+
+                <div id="unit-picker" style="position: relative;">
+                    <button
+                        type="button"
+                        id="unit-picker-btn"
+                        onclick="toggleUnitDropdown(event)"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5
+                               bg-white outline-none text-sm transition duration-200
+                               hover:border-gray-400 text-left flex items-center justify-between"
+                        style="color: #6b7280;"
+                    >
+                        <span id="unit-picker-label">Select Receiving Unit</span>
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <input type="hidden" name="receiving_unit_id" id="unit-hidden-input">
+
+                    <div
+                        id="unit-dropdown"
+                        style="
+                            display: none;
+                            position: absolute;
+                            top: calc(100% + 4px);
+                            left: 0;
+                            width: 100%;
+                            background: white;
+                            border: 1px solid #d1d5db;
+                            border-radius: 0.625rem;
+                            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                            z-index: 99999;
+                            overflow: hidden;
+                            max-height: 220px;
+                            overflow-y: auto;
+                        "
+                    >
+                        @foreach($units as $unit)
+                            @if($unit->id == auth()->user()->unit_id)
+                                @continue
+                            @endif
+                            @if(in_array($unit->name, [
+                                'Resumption NCO', 'TOP NCO', 'Restoration NCO',
+                                'Prior Years NCO', 'Pension Differential 18-19', 'Own Right NCO',
+                                'Posthumous NCO', 'Retirement NCO', 'RSAB NCO', 'CDD NCO'
+                            ]))
+                                @continue
+                            @endif
+
+                            @if($unit->name === 'PAU')
+                                <div
+                                    class="unit-row"
+                                    data-unit-id="{{ $unit->id }}"
+                                    data-unit-name="PAU"
+                                    data-has-flyout="pau"
+                                    style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:background 0.15s;"
+                                >
+                                    <span>PAU</span>
+                                    <svg style="width:13px;height:13px;color:#9ca3af;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </div>
+                            @elseif($unit->name === 'BGCU')
+                                <div
+                                    class="unit-row"
+                                    data-unit-id="{{ $unit->id }}"
+                                    data-unit-name="BGCU"
+                                    data-has-flyout="bgcu"
+                                    style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:background 0.15s;"
+                                >
+                                    <span>BGCU</span>
+                                    <svg style="width:13px;height:13px;color:#9ca3af;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </div>
+                            @else
+                                <div
+                                    class="unit-row"
+                                    data-unit-id="{{ $unit->id }}"
+                                    data-unit-name="{{ $unit->name }}"
+                                    style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
+                                >
+                                    {{ $unit->name }}
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+
                 <p class="text-xs text-gray-500 mt-1">You cannot send to your own unit</p>
             </div>
 
@@ -322,23 +363,54 @@
                 <label class="block text-sm font-semibold text-gray-700 mb-1.5">
                     Document Type <span class="text-red-500">*</span>
                 </label>
-                <select
-                    name="document_type"
-                    required
-                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5
-                           bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                           outline-none text-sm transition duration-200
-                           hover:border-gray-400"
-                >
-                    <option value="">Select document type</option>
-                    <option>Birth Certificate</option>
-                    <option>Marriage Certificate</option>
-                    <option>Clearance</option>
-                    <option>Memorandum</option>
-                    <option>Letter</option>
-                    <option>Report</option>
-                    <option>Others</option>
-                </select>
+
+                <div id="doctype-picker" style="position: relative;">
+                    <button
+                        type="button"
+                        id="doctype-picker-btn"
+                        onclick="toggleDoctypeDropdown(event)"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5
+                               bg-white outline-none text-sm transition duration-200
+                               hover:border-gray-400 text-left flex items-center justify-between"
+                        style="color: #6b7280;"
+                    >
+                        <span id="doctype-picker-label">Select document type</span>
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <input type="hidden" name="document_type" id="doctype-hidden-input">
+
+                    <div
+                        id="doctype-dropdown"
+                        style="
+                            display: none;
+                            position: absolute;
+                            top: calc(100% + 4px);
+                            left: 0;
+                            width: 100%;
+                            background: white;
+                            border: 1px solid #d1d5db;
+                            border-radius: 0.625rem;
+                            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                            z-index: 99999;
+                            overflow: hidden;
+                            max-height: 220px;
+                            overflow-y: auto;
+                        "
+                    >
+                        @foreach($documentTypes as $type)
+                            <div
+                                class="doctype-row"
+                                data-value="{{ $type->name }}"
+                                style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
+                            >
+                                {{ $type->name }}
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
             </div>
 
             <!-- File Upload -->
@@ -346,7 +418,6 @@
                 <label class="block text-sm font-semibold text-gray-700 mb-1.5">
                     Attach File <span class="text-red-500">*</span>
                 </label>
-
                 <div class="relative">
                     <input
                         type="file"
@@ -368,7 +439,6 @@
 
             <!-- FOOTER -->
             <div class="flex justify-end gap-3 pt-4 border-t">
-
                 <button
                     type="button"
                     @click="open = false"
@@ -378,7 +448,6 @@
                 >
                     Cancel
                 </button>
-
                 <button
                     type="submit"
                     class="px-6 py-2.5 rounded-lg text-white font-semibold text-sm
@@ -388,7 +457,6 @@
                 >
                     Upload
                 </button>
-
             </div>
             </form>
 
@@ -396,35 +464,28 @@
     </div>
 
     <!-- SUCCESS UPLOAD MODAL -->
-    <div x-show="showSuccessUpload" 
+    <div x-show="showSuccessUpload"
          x-cloak
-         class="fixed inset-0 z-50 flex items-center justify-center" 
+         class="fixed inset-0 z-50 flex items-center justify-center"
          style="background-color: rgba(11, 31, 58, 0.6); backdrop-filter: blur(4px);"
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100">
-        
-        <div class="rounded-3xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center" 
+        <div class="rounded-3xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center"
              style="background-color: white;"
              x-transition:enter="transition ease-out duration-300 delay-75"
              x-transition:enter-start="opacity-0 scale-75"
              x-transition:enter-end="opacity-100 scale-100">
-            
-            <!-- Animated checkmark -->
             <div class="mb-6">
-                <div class="mx-auto w-20 h-20 rounded-full flex items-center justify-center shadow-lg animate-bounce-in" 
+                <div class="mx-auto w-20 h-20 rounded-full flex items-center justify-center shadow-lg animate-bounce-in"
                      style="background: linear-gradient(to bottom right, #60a5fa, #3b82f6);">
                     <svg class="w-10 h-10" style="color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
                     </svg>
                 </div>
             </div>
-
-            <!-- Success message -->
             <h3 class="text-2xl font-bold mb-2" style="color: #111827;">Uploaded!</h3>
-            <p class="text-sm" style="color: #6b7280;">
-                Document has been uploaded successfully
-            </p>
+            <p class="text-sm" style="color: #6b7280;">Document has been uploaded successfully</p>
         </div>
     </div>
 
@@ -439,24 +500,15 @@
     selectedUnit: '',
     showSuccessForward: false,
     forwardedUnitName: '',
-    
     async submitForward(event) {
         event.preventDefault();
-        
         try {
             const form = document.getElementById('forward-form');
-            const formData = new FormData(form);
-            
             const unitSelect = form.querySelector('select[name=forward_to_unit_id]');
             this.forwardedUnitName = unitSelect.options[unitSelect.selectedIndex].text;
-            
             this.openForward = false;
             this.showSuccessForward = true;
-            
-            setTimeout(() => {
-                form.submit();
-            }, 1500);
-            
+            setTimeout(() => { form.submit(); }, 1500);
         } catch (error) {
             console.error('Error forwarding document:', error);
             alert('An error occurred. Please try again.');
@@ -471,7 +523,7 @@
     selectedUnit = '';
 ">
 
-    <!-- FORWARD MODAL BACKDROP + MODAL (CENTERED) -->
+    <!-- FORWARD MODAL BACKDROP -->
     <div
         x-show="openForward"
         x-cloak
@@ -485,8 +537,6 @@
         class="fixed inset-0 z-[10000] flex items-center justify-center p-4"
         style="background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);"
     >
-
-        <!-- MODAL CARD -->
         <div
             @click.stop
             x-transition:enter="transition ease-out duration-300"
@@ -498,16 +548,12 @@
             class="bg-white rounded-2xl shadow-2xl overflow-hidden"
             style="width: 500px; max-height: 90vh;"
         >
-
             <!-- HEADER -->
             <div class="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white">
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-800">
-                        Forward Document
-                    </h2>
+                    <h2 class="text-lg font-semibold text-gray-800">Forward Document</h2>
                     <p class="text-xs text-gray-600 mt-0.5" x-text="selectedDocumentNumber"></p>
                 </div>
-
                 <button
                     @click="openForward = false"
                     type="button"
@@ -536,31 +582,104 @@
                     <p class="text-sm text-gray-800" x-text="selectedDocumentTitle"></p>
                 </div>
 
-                <!-- Select Unit to Forward -->
+                <!-- Forward to Unit — custom picker with flyout -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                         Forward to Unit <span class="text-red-500">*</span>
                     </label>
-                    <select
-                        name="forward_to_unit_id"
-                        x-model="selectedUnit"
-                        required
-                        class="w-full rounded-lg border border-gray-300 px-4 py-3
-                               bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                               outline-none text-sm transition duration-200
-                               hover:border-gray-400"
-                    >
-                        <option value="">Select unit to forward to</option>
-                        @foreach($allUnits as $unit)
-                            @if($unit->id != auth()->user()->unit_id)
-                                <option value="{{ $unit->id }}">{{ $unit->name }}</option>
-                            @endif
-                        @endforeach
-                    </select>
+
+                    <div id="forward-unit-picker" style="position: relative;">
+                        <button
+                            type="button"
+                            id="forward-unit-picker-btn"
+                            onclick="toggleForwardUnitDropdown(event)"
+                            class="w-full rounded-lg border border-gray-300 px-4 py-3
+                                   bg-white outline-none text-sm transition duration-200
+                                   hover:border-gray-400 text-left flex items-center justify-between"
+                            style="color: #6b7280;"
+                        >
+                            <span id="forward-unit-picker-label">Select unit to forward to</span>
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <input type="hidden" name="forward_to_unit_id" id="forward-unit-hidden-input"
+                               x-model="selectedUnit">
+
+                        <div
+                            id="forward-unit-dropdown"
+                            style="
+                                display: none;
+                                position: absolute;
+                                top: calc(100% + 4px);
+                                left: 0;
+                                width: 100%;
+                                background: white;
+                                border: 1px solid #d1d5db;
+                                border-radius: 0.625rem;
+                                box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                                z-index: 99999;
+                                overflow: hidden;
+                                max-height: 220px;
+                                overflow-y: auto;
+                            "
+                        >
+                            @foreach($allUnits as $unit)
+                                @if($unit->id == auth()->user()->unit_id)
+                                    @continue
+                                @endif
+                                @if(in_array($unit->name, [
+                                    'Resumption NCO', 'TOP NCO', 'Restoration NCO',
+                                    'Prior Years NCO', 'Pension Differential 18-19', 'Own Right NCO',
+                                    'Posthumous NCO', 'Retirement NCO', 'RSAB NCO', 'CDD NCO'
+                                ]))
+                                    @continue
+                                @endif
+
+                                @if($unit->name === 'PAU')
+                                    <div
+                                        class="forward-unit-row"
+                                        data-unit-id="{{ $unit->id }}"
+                                        data-unit-name="PAU"
+                                        data-has-flyout="fwd-pau"
+                                        style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:background 0.15s;"
+                                    >
+                                        <span>PAU</span>
+                                        <svg style="width:13px;height:13px;color:#9ca3af;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                    </div>
+                                @elseif($unit->name === 'BGCU')
+                                    <div
+                                        class="forward-unit-row"
+                                        data-unit-id="{{ $unit->id }}"
+                                        data-unit-name="BGCU"
+                                        data-has-flyout="fwd-bgcu"
+                                        style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:background 0.15s;"
+                                    >
+                                        <span>BGCU</span>
+                                        <svg style="width:13px;height:13px;color:#9ca3af;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                    </div>
+                                @else
+                                    <div
+                                        class="forward-unit-row"
+                                        data-unit-id="{{ $unit->id }}"
+                                        data-unit-name="{{ $unit->name }}"
+                                        style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
+                                    >
+                                        {{ $unit->name }}
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
                     <p class="text-xs text-gray-500 mt-1.5">Choose the unit that will receive this document</p>
                 </div>
 
-                <!-- Optional Notes -->
+                <!-- Notes -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                         Notes (Optional)
@@ -587,7 +706,6 @@
                     >
                         Cancel
                     </button>
-
                     <button
                         type="submit"
                         :disabled="!selectedUnit"
@@ -606,36 +724,30 @@
                     </button>
                 </div>
             </form>
-
         </div>
     </div>
 
     <!-- SUCCESS FORWARD MODAL -->
-    <div x-show="showSuccessForward" 
+    <div x-show="showSuccessForward"
          x-cloak
-         class="fixed inset-0 z-[10001] flex items-center justify-center" 
+         class="fixed inset-0 z-[10001] flex items-center justify-center"
          style="background-color: rgba(11, 31, 58, 0.6); backdrop-filter: blur(4px);"
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100">
-        
-        <div class="rounded-3xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center" 
+        <div class="rounded-3xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center"
              style="background-color: white;"
              x-transition:enter="transition ease-out duration-300 delay-75"
              x-transition:enter-start="opacity-0 scale-75"
              x-transition:enter-end="opacity-100 scale-100">
-            
-            <!-- Animated checkmark -->
             <div class="mb-6">
-                <div class="mx-auto w-20 h-20 rounded-full flex items-center justify-center shadow-lg animate-bounce-in" 
+                <div class="mx-auto w-20 h-20 rounded-full flex items-center justify-center shadow-lg animate-bounce-in"
                      style="background: linear-gradient(to bottom right, #60a5fa, #3b82f6);">
                     <svg class="w-10 h-10" style="color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
                     </svg>
                 </div>
             </div>
-
-            <!-- Success message -->
             <h3 class="text-2xl font-bold mb-2" style="color: #111827;">Forwarded!</h3>
             <p class="text-sm mb-1" style="color: #6b7280;">
                 <span class="font-semibold" x-text="selectedDocumentNumber"></span>
@@ -648,38 +760,288 @@
 
 </div>
 
-<!-- Add this to your CSS or in a style tag -->
+<!-- PAU Flyout (upload modal) -->
+<div id="pau-flyout" style="display:none;position:fixed;width:230px;background:white;border:1px solid #c7dcff;border-radius:0.625rem;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:999999;overflow:hidden;">
+    <div style="padding:0.5rem 1rem 0.4rem;font-size:0.7rem;font-weight:700;color:#1e5ba8;background:#f0f6ff;border-bottom:1px solid #c7dcff;letter-spacing:0.05em;">PAU SUB-UNITS</div>
+    @foreach($units as $subUnit)
+        @if(in_array($subUnit->name, ['Resumption NCO','TOP NCO','Restoration NCO','Prior Years NCO','Pension Differential 18-19','Own Right NCO']))
+            <div class="flyout-item" data-unit-id="{{ $subUnit->id }}" data-unit-name="{{ $subUnit->name }}" style="padding:0.6rem 1rem;font-size:0.875rem;color:#374151;cursor:pointer;transition:background 0.15s;">{{ $subUnit->name }}</div>
+        @endif
+    @endforeach
+</div>
+
+<!-- BGCU Flyout (upload modal) -->
+<div id="bgcu-flyout" style="display:none;position:fixed;width:210px;background:white;border:1px solid #c7dcff;border-radius:0.625rem;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:999999;overflow:hidden;">
+    <div style="padding:0.5rem 1rem 0.4rem;font-size:0.7rem;font-weight:700;color:#1e5ba8;background:#f0f6ff;border-bottom:1px solid #c7dcff;letter-spacing:0.05em;">BGCU SUB-UNITS</div>
+    @foreach($units as $subUnit)
+        @if(in_array($subUnit->name, ['Posthumous NCO','Retirement NCO','RSAB NCO','CDD NCO']))
+            <div class="flyout-item" data-unit-id="{{ $subUnit->id }}" data-unit-name="{{ $subUnit->name }}" style="padding:0.6rem 1rem;font-size:0.875rem;color:#374151;cursor:pointer;transition:background 0.15s;">{{ $subUnit->name }}</div>
+        @endif
+    @endforeach
+</div>
+
+<!-- PAU Flyout (forward modal) -->
+<div id="fwd-pau-flyout" style="display:none;position:fixed;width:230px;background:white;border:1px solid #c7dcff;border-radius:0.625rem;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:999999;overflow:hidden;">
+    <div style="padding:0.5rem 1rem 0.4rem;font-size:0.7rem;font-weight:700;color:#1e5ba8;background:#f0f6ff;border-bottom:1px solid #c7dcff;letter-spacing:0.05em;">PAU SUB-UNITS</div>
+    @foreach($allUnits as $subUnit)
+        @if(in_array($subUnit->name, ['Resumption NCO','TOP NCO','Restoration NCO','Prior Years NCO','Pension Differential 18-19','Own Right NCO']))
+            <div class="fwd-flyout-item" data-unit-id="{{ $subUnit->id }}" data-unit-name="{{ $subUnit->name }}" style="padding:0.6rem 1rem;font-size:0.875rem;color:#374151;cursor:pointer;transition:background 0.15s;">{{ $subUnit->name }}</div>
+        @endif
+    @endforeach
+</div>
+
+<!-- BGCU Flyout (forward modal) -->
+<div id="fwd-bgcu-flyout" style="display:none;position:fixed;width:210px;background:white;border:1px solid #c7dcff;border-radius:0.625rem;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:999999;overflow:hidden;">
+    <div style="padding:0.5rem 1rem 0.4rem;font-size:0.7rem;font-weight:700;color:#1e5ba8;background:#f0f6ff;border-bottom:1px solid #c7dcff;letter-spacing:0.05em;">BGCU SUB-UNITS</div>
+    @foreach($allUnits as $subUnit)
+        @if(in_array($subUnit->name, ['Posthumous NCO','Retirement NCO','RSAB NCO','CDD NCO']))
+            <div class="fwd-flyout-item" data-unit-id="{{ $subUnit->id }}" data-unit-name="{{ $subUnit->name }}" style="padding:0.6rem 1rem;font-size:0.875rem;color:#374151;cursor:pointer;transition:background 0.15s;">{{ $subUnit->name }}</div>
+        @endif
+    @endforeach
+</div>
+
 <style>
-    [x-cloak] { 
-        display: none !important; 
-    }
-
+    [x-cloak] { display: none !important; }
     @keyframes bounce-in {
-        0% {
-            transform: scale(0);
-            opacity: 0;
-        }
-        50% {
-            transform: scale(1.1);
-        }
-        100% {
-            transform: scale(1);
-            opacity: 1;
-        }
+        0%   { transform: scale(0); opacity: 0; }
+        50%  { transform: scale(1.1); }
+        100% { transform: scale(1); opacity: 1; }
     }
-
     .animate-bounce-in {
         animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     }
 </style>
 
+<script>
+    let flyoutTimers = {};
+
+    // ── Shared flyout helpers ────────────────────────────────────────────────
+    function hideFlyout(id) {
+        clearTimeout(flyoutTimers[id]);
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    }
+
+    function showFlyoutNext(row, flyoutId) {
+        const rect   = row.getBoundingClientRect();
+        const flyout = document.getElementById(flyoutId);
+        flyout.style.top  = rect.top + 'px';
+        flyout.style.left = (rect.right + 6) + 'px';
+        flyout.style.display = 'block';
+    }
+
+    // ── Upload modal — unit picker ───────────────────────────────────────────
+    function toggleUnitDropdown(e) {
+        e.stopPropagation();
+        const dropdown = document.getElementById('unit-dropdown');
+        const isOpen   = dropdown.style.display === 'block';
+        dropdown.style.display = isOpen ? 'none' : 'block';
+        if (isOpen) { hideFlyout('pau-flyout'); hideFlyout('bgcu-flyout'); }
+        document.getElementById('doctype-dropdown').style.display = 'none';
+    }
+
+    function selectUnit(id, name) {
+        document.getElementById('unit-hidden-input').value = id;
+        const label = document.getElementById('unit-picker-label');
+        label.textContent = name;
+        label.style.color = '#111827';
+        document.getElementById('unit-dropdown').style.display = 'none';
+        hideFlyout('pau-flyout');
+        hideFlyout('bgcu-flyout');
+    }
+
+    // ── Upload modal — doctype picker ────────────────────────────────────────
+    function toggleDoctypeDropdown(e) {
+        e.stopPropagation();
+        const dropdown = document.getElementById('doctype-dropdown');
+        const isOpen   = dropdown.style.display === 'block';
+        dropdown.style.display = isOpen ? 'none' : 'block';
+        document.getElementById('unit-dropdown').style.display = 'none';
+        hideFlyout('pau-flyout');
+        hideFlyout('bgcu-flyout');
+    }
+
+    function selectDoctype(value) {
+        document.getElementById('doctype-hidden-input').value = value;
+        const label = document.getElementById('doctype-picker-label');
+        label.textContent = value;
+        label.style.color = '#111827';
+        document.getElementById('doctype-dropdown').style.display = 'none';
+    }
+
+    // ── Forward modal — unit picker ──────────────────────────────────────────
+    function toggleForwardUnitDropdown(e) {
+        e.stopPropagation();
+        const dropdown = document.getElementById('forward-unit-dropdown');
+        const isOpen   = dropdown.style.display === 'block';
+        dropdown.style.display = isOpen ? 'none' : 'block';
+        if (isOpen) { hideFlyout('fwd-pau-flyout'); hideFlyout('fwd-bgcu-flyout'); }
+    }
+
+    function selectForwardUnit(id, name) {
+        document.getElementById('forward-unit-hidden-input').value = id;
+        // Also update Alpine x-model by dispatching an input event
+        const input = document.getElementById('forward-unit-hidden-input');
+        input.dispatchEvent(new Event('input'));
+        const label = document.getElementById('forward-unit-picker-label');
+        label.textContent = name;
+        label.style.color = '#111827';
+        document.getElementById('forward-unit-dropdown').style.display = 'none';
+        hideFlyout('fwd-pau-flyout');
+        hideFlyout('fwd-bgcu-flyout');
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // Move all flyouts to <body>
+        ['pau-flyout', 'bgcu-flyout', 'fwd-pau-flyout', 'fwd-bgcu-flyout'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) document.body.appendChild(el);
+        });
+
+        // ── Upload modal flyout items
+        document.querySelectorAll('#pau-flyout .flyout-item, #bgcu-flyout .flyout-item').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#eff6ff');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('click', () => selectUnit(item.dataset.unitId, item.dataset.unitName));
+        });
+
+        ['pau-flyout', 'bgcu-flyout'].forEach(id => {
+            const el = document.getElementById(id);
+            el.addEventListener('mouseenter', () => clearTimeout(flyoutTimers[id]));
+            el.addEventListener('mouseleave', () => hideFlyout(id));
+        });
+
+        // ── Upload modal unit rows
+        document.querySelectorAll('.unit-row').forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                row.style.background = '#f3f4f6';
+                const fk = row.dataset.hasFlyout;
+                if (fk) {
+                    hideFlyout(fk === 'pau' ? 'bgcu-flyout' : 'pau-flyout');
+                    clearTimeout(flyoutTimers[fk + '-flyout']);
+                    showFlyoutNext(row, fk + '-flyout');
+                } else {
+                    hideFlyout('pau-flyout');
+                    hideFlyout('bgcu-flyout');
+                }
+            });
+            row.addEventListener('mouseleave', () => {
+                row.style.background = '';
+                const fk = row.dataset.hasFlyout;
+                if (fk) flyoutTimers[fk + '-flyout'] = setTimeout(() => hideFlyout(fk + '-flyout'), 120);
+            });
+            row.addEventListener('click', () => selectUnit(row.dataset.unitId, row.dataset.unitName));
+        });
+
+        // ── Doctype rows
+        document.querySelectorAll('.doctype-row').forEach(row => {
+            row.addEventListener('mouseenter', () => row.style.background = '#f3f4f6');
+            row.addEventListener('mouseleave', () => row.style.background = '');
+            row.addEventListener('click',      () => selectDoctype(row.dataset.value));
+        });
+
+        // ── Forward modal flyout items
+        document.querySelectorAll('#fwd-pau-flyout .fwd-flyout-item, #fwd-bgcu-flyout .fwd-flyout-item').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#eff6ff');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('click', () => selectForwardUnit(item.dataset.unitId, item.dataset.unitName));
+        });
+
+        ['fwd-pau-flyout', 'fwd-bgcu-flyout'].forEach(id => {
+            const el = document.getElementById(id);
+            el.addEventListener('mouseenter', () => clearTimeout(flyoutTimers[id]));
+            el.addEventListener('mouseleave', () => hideFlyout(id));
+        });
+
+        // ── Forward modal unit rows
+        document.querySelectorAll('.forward-unit-row').forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                row.style.background = '#f3f4f6';
+                const fk = row.dataset.hasFlyout;
+                if (fk) {
+                    hideFlyout(fk === 'fwd-pau' ? 'fwd-bgcu-flyout' : 'fwd-pau-flyout');
+                    clearTimeout(flyoutTimers[fk + '-flyout']);
+                    showFlyoutNext(row, fk + '-flyout');
+                } else {
+                    hideFlyout('fwd-pau-flyout');
+                    hideFlyout('fwd-bgcu-flyout');
+                }
+            });
+            row.addEventListener('mouseleave', () => {
+                row.style.background = '';
+                const fk = row.dataset.hasFlyout;
+                if (fk) flyoutTimers[fk + '-flyout'] = setTimeout(() => hideFlyout(fk + '-flyout'), 120);
+            });
+            row.addEventListener('click', () => selectForwardUnit(row.dataset.unitId, row.dataset.unitName));
+        });
+
+        // ── Close dropdowns on outside click
+        document.addEventListener('click', function (e) {
+            const pauFlyout    = document.getElementById('pau-flyout');
+            const bgcuFlyout   = document.getElementById('bgcu-flyout');
+            const fwdPauFlyout = document.getElementById('fwd-pau-flyout');
+            const fwdBgcuFlyout= document.getElementById('fwd-bgcu-flyout');
+
+            const unitPicker        = document.getElementById('unit-picker');
+            const doctypePicker     = document.getElementById('doctype-picker');
+            const forwardUnitPicker = document.getElementById('forward-unit-picker');
+
+            if (unitPicker && !unitPicker.contains(e.target) &&
+                !pauFlyout.contains(e.target) && !bgcuFlyout.contains(e.target)) {
+                document.getElementById('unit-dropdown').style.display = 'none';
+                hideFlyout('pau-flyout');
+                hideFlyout('bgcu-flyout');
+            }
+            if (doctypePicker && !doctypePicker.contains(e.target)) {
+                document.getElementById('doctype-dropdown').style.display = 'none';
+            }
+            if (forwardUnitPicker && !forwardUnitPicker.contains(e.target) &&
+                !fwdPauFlyout.contains(e.target) && !fwdBgcuFlyout.contains(e.target)) {
+                document.getElementById('forward-unit-dropdown').style.display = 'none';
+                hideFlyout('fwd-pau-flyout');
+                hideFlyout('fwd-bgcu-flyout');
+            }
+        });
+
+        // ── Reset upload modal pickers on close
+        const uploadBackdrop = document.querySelector('[x-show="open"]');
+        if (uploadBackdrop) {
+            new MutationObserver(function () {
+                if (uploadBackdrop.style.display === 'none') {
+                    document.getElementById('unit-hidden-input').value = '';
+                    const ul = document.getElementById('unit-picker-label');
+                    ul.textContent = 'Select Receiving Unit';
+                    ul.style.color = '#6b7280';
+                    document.getElementById('unit-dropdown').style.display = 'none';
+                    hideFlyout('pau-flyout');
+                    hideFlyout('bgcu-flyout');
+                    document.getElementById('doctype-hidden-input').value = '';
+                    const dl = document.getElementById('doctype-picker-label');
+                    dl.textContent = 'Select document type';
+                    dl.style.color = '#6b7280';
+                    document.getElementById('doctype-dropdown').style.display = 'none';
+                }
+            }).observe(uploadBackdrop, { attributes: true, attributeFilter: ['style'] });
+        }
+
+        // ── Reset forward modal picker on close
+        const forwardBackdrop = document.querySelector('[x-show="openForward"]');
+        if (forwardBackdrop) {
+            new MutationObserver(function () {
+                if (forwardBackdrop.style.display === 'none') {
+                    document.getElementById('forward-unit-hidden-input').value = '';
+                    const fl = document.getElementById('forward-unit-picker-label');
+                    fl.textContent = 'Select unit to forward to';
+                    fl.style.color = '#6b7280';
+                    document.getElementById('forward-unit-dropdown').style.display = 'none';
+                    hideFlyout('fwd-pau-flyout');
+                    hideFlyout('fwd-bgcu-flyout');
+                }
+            }).observe(forwardBackdrop, { attributes: true, attributeFilter: ['style'] });
+        }
+    });
+</script>
+
 @endsection
-
-
-
-
-
-
-
-
-

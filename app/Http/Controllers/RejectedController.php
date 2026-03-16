@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
-use App\Models\Unit; // <-- Add this
+use App\Models\DocumentType;
+use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -39,6 +40,9 @@ class RejectedController extends Controller
 
         // Get all units for dropdowns or safe display in view
         $units = Unit::visibleToUser($user);
+
+        // Get all document types from the database
+        $documentTypes = DocumentType::orderBy('name')->get();
 
         if ($user->isAdmin()) {
             // Admin sees all rejected documents
@@ -104,7 +108,8 @@ class RejectedController extends Controller
             'documents',
             'units',
             'filterUnits',
-            'selectedUnitId'
+            'selectedUnitId',
+            'documentTypes'  // <-- added
         ));
     }
 }

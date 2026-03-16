@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
+use App\Models\DocumentType;
 use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -37,7 +38,10 @@ class IncomingController extends Controller
         } else {
             $selectedUnitId = $request->session()->get('unit_filter_id');
         }
-        
+
+        // Get all document types from the database
+        $documentTypes = DocumentType::orderBy('name')->get();
+
         if ($user->isAdmin()) {
             // Admin sees all incoming documents
             $query = Document::with(['senderUnit', 'receivingUnit'])
@@ -96,15 +100,16 @@ class IncomingController extends Controller
                 ->paginate($perPage)
                 ->withQueryString();
         }
-        
+
         // Get units for the create form (excluding admin unit for non-admins)
         $units = Unit::visibleToUser($user);
-        
+
         return view('incoming.incoming', compact(
             'documents',
             'units',
             'filterUnits',
-            'selectedUnitId'
+            'selectedUnitId',
+            'documentTypes'  // <-- added
         ));
     }
 
@@ -114,10 +119,16 @@ class IncomingController extends Controller
     public function create()
     {
         $user = Auth::user();
-        
+
         // Get units visible to this user
         $units = Unit::visibleToUser($user);
-        
-        return view('incoming.create', compact('units'));
+
+        // Get all document types from the database
+        $documentTypes = DocumentType::orderBy('name')->get();
+
+        return view('incoming.create', compact(
+            'units',
+            'documentTypes'  // <-- added
+        ));
     }
 }

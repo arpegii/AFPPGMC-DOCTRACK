@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
+use App\Models\DocumentType;
 use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,6 +40,9 @@ class OutgoingController extends Controller
 
         // Get units visible to the current user (excludes ADMN for non-admins)
         $units = Unit::visibleToUser($user);
+
+        // Get all document types from the database
+        $documentTypes = DocumentType::orderBy('name')->get();
 
         if ($user->isAdmin()) {
             // Admin sees all pending outgoing documents.
@@ -103,7 +107,8 @@ class OutgoingController extends Controller
             'documents',
             'units',
             'filterUnits',
-            'selectedUnitId'
+            'selectedUnitId',
+            'documentTypes'  // <-- added
         ));
     }
 }

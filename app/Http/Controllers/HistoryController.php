@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
-use App\Models\Unit; // <-- Add this
+use App\Models\DocumentType;
+use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -40,6 +41,9 @@ class HistoryController extends Controller
         // Get all units for dropdowns or displaying names
         $units = Unit::visibleToUser($user);
 
+        // Get all document types from the database
+        $documentTypes = DocumentType::orderBy('name')->get();
+
         if ($user->isAdmin()) {
             // Admin sees all documents
             $query = Document::with(['senderUnit', 'receivingUnit']);
@@ -71,14 +75,14 @@ class HistoryController extends Controller
         } else {
             // Users see only documents where their unit is sender OR receiver
             $query = Document::with(['senderUnit', 'receivingUnit'])
-                ->where(function($query) use ($user) {
+                ->where(function ($query) use ($user) {
                     $query->where('sender_unit_id', $user->unit_id)
                           ->orWhere('receiving_unit_id', $user->unit_id);
                 });
 
             // Apply unit filter for regular users (by sender or receiver)
             if ($selectedUnitId) {
-                $query->where(function($subQuery) use ($selectedUnitId) {
+                $query->where(function ($subQuery) use ($selectedUnitId) {
                     $subQuery->where('sender_unit_id', $selectedUnitId)
                              ->orWhere('receiving_unit_id', $selectedUnitId);
                 });
@@ -108,7 +112,8 @@ class HistoryController extends Controller
             'documents',
             'units',
             'filterUnits',
-            'selectedUnitId'
+            'selectedUnitId',
+            'documentTypes'  // <-- added
         ));
     }
 }

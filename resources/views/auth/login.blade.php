@@ -337,7 +337,7 @@
                         <img src="/images/logo.png" alt="AFPPGMC Logo" style="width: 100%; height: 100%; object-fit: contain;">
                     </div>
                     <div class="logo-text">
-                        <h1>AFPPGMC Document Tracking System</h1>
+                        <h1>PGMC Pension Services Tracking System</h1>
                         <p>Document Management</p>
                     </div>
                 </div>
