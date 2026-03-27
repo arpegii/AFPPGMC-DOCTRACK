@@ -9,6 +9,7 @@ This guide is for deploying on a local network (LAN) and serving users from a ho
 - Node.js `18+` and npm
 - MySQL/MariaDB (recommended for production)
 - Web server access to project folder
+- PHP extensions: `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `ctype`, `json`, `fileinfo`, `curl`, `xml`
 
 ## 2) First-Time Setup
 
@@ -40,6 +41,13 @@ npm run build
 php artisan optimize
 ```
 
+## 3) Database Setup (First-Time)
+
+- Create an empty database on the DB server.
+- Create a DB user and grant permissions to the database.
+- Update `.env` with the correct DB connection settings.
+- If migrating from an existing installation, export the old database and import it before running migrations.
+
 ## 3) Run the App (LAN Accessible)
 
 ```powershell
@@ -64,7 +72,31 @@ If you later change `QUEUE_CONNECTION` from `sync` to `database`, also run:
 php artisan queue:work --tries=3 --timeout=120
 ```
 
-## 5) Update Deployment
+## 5) Keep Scheduler/Queue Running (Windows LAN)
+
+For an office LAN on Windows, keep these running reliably:
+
+- Scheduler: use Task Scheduler to run this every 1 minute:
+  - `php artisan schedule:run`
+- Queue (only if `QUEUE_CONNECTION=database`): run `php artisan queue:work` as a scheduled task or service (e.g., via NSSM).
+
+## 6) File Permissions
+
+Ensure these folders are writable by the user running PHP:
+
+- `storage/`
+- `bootstrap/cache`
+
+## 7) Firewall / LAN Access
+
+- Allow inbound TCP on port `8000` in Windows Firewall (or use another allowed port).
+- Users should connect to the host machine via its LAN IP/hostname.
+
+## 8) Client Workstations
+
+- Client PCs only need a modern browser (Chrome/Edge/Firefox).
+
+## 9) Update Deployment
 
 After pulling new code:
 
@@ -79,7 +111,7 @@ php artisan optimize
 
 Restart running app/scheduler processes.
 
-## 6) Pre-Go-Live Checklist
+## 10) Pre-Go-Live Checklist
 
 - [ ] `APP_DEBUG=false`
 - [ ] `APP_URL` points to actual LAN address/hostname
@@ -89,4 +121,4 @@ Restart running app/scheduler processes.
 - [ ] Scheduler is running (`schedule:work`)
 - [ ] Mail server settings verified (if using email notifications)
 - [ ] Backup plan for MySQL database is in place
-
+- [ ] Windows Firewall allows inbound access on the chosen port
