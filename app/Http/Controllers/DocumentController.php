@@ -115,18 +115,17 @@ class DocumentController extends Controller
         }
 
         // Get accessible units for validation
-        $accessibleUnitIds = $user->isAdmin() 
+        $accessibleUnitIds = $user->isAdmin()
             ? Unit::all()->pluck('id')->toArray()
             : Unit::visibleToUser($user)->pluck('id')->toArray();
 
         $request->validate([
-            'document_number' => 'required|unique:documents,document_number',
-            'title' => 'required|string|max:255',
-            'receiving_unit_id' => [
+            'document_number'    => 'required|unique:documents,document_number',
+            'title'              => 'required|string|max:255',
+            'receiving_unit_id'  => [
                 'required',
                 'exists:units,id',
                 function ($attribute, $value, $fail) use ($user, $accessibleUnitIds) {
-                    // Check if receiving unit is in accessible units
                     if (!in_array($value, $accessibleUnitIds, true)) {
                         $fail('You cannot send documents to this unit.');
                     }
@@ -138,33 +137,42 @@ class DocumentController extends Controller
                     }
                 },
             ],
-            'document_type' => 'required|string|max:255',
-            'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:25600',
+            'document_type'      => 'required|string|max:255',
+            // Only required when "Others" is selected
+            'document_type_other' => 'nullable|string|max:255|required_if:document_type,Others',
+            'file'               => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:25600',
         ], [
-            'file.max' => 'The file must not be larger than 25MB.',
-            'file.mimes' => 'The file must be a PDF, DOC, DOCX, JPG, or PNG.',
+            'file.max'                  => 'The file must not be larger than 25MB.',
+            'file.mimes'                => 'The file must be a PDF, DOC, DOCX, JPG, or PNG.',
+            'document_type_other.required_if' => 'Please specify the document type when "Others" is selected.',
         ]);
 
-        $filePath = null;
+        // ── Resolve final document type ──────────────────────────────────────
+        // If the user chose "Others", use the free-text field as the actual type.
+        $documentType = $request->document_type === 'Others'
+            ? trim($request->input('document_type_other'))
+            : $request->input('document_type');
+
+        $filePath        = null;
         $fileNameOriginal = null;
         if ($request->hasFile('file')) {
-            $file = $request->file('file');
+            $file      = $request->file('file');
             $extension = strtolower($file->extension() ?: $file->getClientOriginalExtension());
-            $fileName = Str::uuid()->toString() . '.' . $extension;
-            $filePath = $file->storeAs('documents', $fileName, 'local');
+            $fileName  = Str::uuid()->toString() . '.' . $extension;
+            $filePath  = $file->storeAs('documents', $fileName, 'local');
             $fileNameOriginal = $file->getClientOriginalName();
         }
 
         $document = Document::create([
-            'document_number' => $request->document_number,
-            'title' => $request->title,
-            'document_type' => $request->document_type,
-            'sender_unit_id' => $user->unit_id,
+            'document_number'  => $request->document_number,
+            'title'            => $request->title,
+            'document_type'    => $documentType,   // ← resolved value, never "Others"
+            'sender_unit_id'   => $user->unit_id,
             'receiving_unit_id' => $request->receiving_unit_id,
-            'file_path' => $filePath,
-            'file_name' => $fileNameOriginal,
-            'status' => 'incoming',
-            'created_by' => $user->id,
+            'file_path'        => $filePath,
+            'file_name'        => $fileNameOriginal,
+            'status'           => 'incoming',
+            'created_by'       => $user->id,
         ]);
 
         // Load relationships before sending notifications to avoid N+1 queries
@@ -208,7 +216,7 @@ class DocumentController extends Controller
             }
 
             $document->update([
-                'status' => 'received',
+                'status'      => 'received',
                 'received_at' => now(),
                 'received_by' => $user->id,
             ]);
@@ -225,8 +233,8 @@ class DocumentController extends Controller
                 } catch (\Throwable $e) {
                     Log::warning('Failed to send document received notification', [
                         'document_id' => $document->id,
-                        'user_id' => $document->created_by,
-                        'error' => $e->getMessage(),
+                        'user_id'     => $document->created_by,
+                        'error'       => $e->getMessage(),
                     ]);
                 }
             }
@@ -236,8 +244,8 @@ class DocumentController extends Controller
             DB::rollBack();
             Log::error('Error receiving document: ' . $e->getMessage(), [
                 'document_id' => $id,
-                'user_id' => $user->id,
-                'trace' => $e->getTraceAsString()
+                'user_id'     => $user->id,
+                'trace'       => $e->getTraceAsString()
             ]);
             return back()->with('error', 'Failed to mark document as received. Please try again.');
         }
@@ -272,9 +280,9 @@ class DocumentController extends Controller
             $rejectionReason = $request->input('rejection_reason');
 
             $document->update([
-                'status' => 'rejected',
-                'rejected_at' => now(),
-                'rejected_by' => $user->id,
+                'status'           => 'rejected',
+                'rejected_at'      => now(),
+                'rejected_by'      => $user->id,
                 'rejection_reason' => $rejectionReason,
             ]);
 
@@ -290,8 +298,8 @@ class DocumentController extends Controller
                 } catch (\Throwable $e) {
                     Log::warning('Failed to send document rejected notification', [
                         'document_id' => $document->id,
-                        'user_id' => $document->created_by,
-                        'error' => $e->getMessage(),
+                        'user_id'     => $document->created_by,
+                        'error'       => $e->getMessage(),
                     ]);
                 }
             }
@@ -301,8 +309,8 @@ class DocumentController extends Controller
             DB::rollBack();
             Log::error('Error rejecting document: ' . $e->getMessage(), [
                 'document_id' => $id,
-                'user_id' => $user->id,
-                'trace' => $e->getTraceAsString()
+                'user_id'     => $user->id,
+                'trace'       => $e->getTraceAsString()
             ]);
             return back()->with('error', 'Failed to reject document. Please try again.');
         }
@@ -318,7 +326,7 @@ class DocumentController extends Controller
 
         $request->validate([
             'forward_to_unit_id' => 'required|exists:units,id',
-            'notes' => 'nullable|string|max:1000',
+            'notes'              => 'nullable|string|max:1000',
         ]);
 
         /** @var Document $document */
@@ -340,18 +348,18 @@ class DocumentController extends Controller
             DB::beginTransaction();
 
             $forwardHistory = DocumentForwardHistory::create([
-                'document_id' => $document->id,
-                'from_unit_id' => $document->receiving_unit_id,
-                'to_unit_id' => $request->forward_to_unit_id,
+                'document_id'         => $document->id,
+                'from_unit_id'        => $document->receiving_unit_id,
+                'to_unit_id'          => $request->forward_to_unit_id,
                 'forwarded_by_user_id' => $user->id,
-                'notes' => $request->notes,
+                'notes'               => $request->notes,
             ]);
 
             $document->update([
                 'receiving_unit_id' => $request->forward_to_unit_id,
-                'status' => 'incoming',
-                'forwarded_by' => $user->id,
-                'forwarded_at' => now(),
+                'status'            => 'incoming',
+                'forwarded_by'      => $user->id,
+                'forwarded_at'      => now(),
             ]);
 
             // Load relationships before sending notifications
@@ -370,9 +378,9 @@ class DocumentController extends Controller
                     $receivingUser->notify(new DocumentForwardedNotification($document, $forwardHistory));
                 } catch (\Throwable $notifyException) {
                     Log::warning('Failed to send forwarded notification', [
-                        'document_id' => $document->id,
+                        'document_id'       => $document->id,
                         'receiving_user_id' => $receivingUser->id,
-                        'error' => $notifyException->getMessage(),
+                        'error'             => $notifyException->getMessage(),
                     ]);
                 }
             }
@@ -384,8 +392,8 @@ class DocumentController extends Controller
 
             Log::error('Error forwarding document: ' . $e->getMessage(), [
                 'document_id' => $id,
-                'user_id' => $user->id,
-                'trace' => $e->getTraceAsString()
+                'user_id'     => $user->id,
+                'trace'       => $e->getTraceAsString()
             ]);
 
             return back()->with('error', 'Failed to forward document. Please try again.');
@@ -410,14 +418,14 @@ class DocumentController extends Controller
             'forwardHistory.fromUnit',
             'forwardHistory.toUnit',
             'forwardHistory.forwardedBy',
-            'lastResubmittedByUser',  // ← added for resubmit notes display
+            'lastResubmittedByUser',
         ])->findOrFail($id);
 
         if (!$user->isAdmin()) {
             $hasAccess = $document->sender_unit_id === $user->unit_id
                       || $document->receiving_unit_id === $user->unit_id
                       || $document->forwardHistory->contains(function ($history) use ($user) {
-                            return $history->from_unit_id === $user->unit_id 
+                            return $history->from_unit_id === $user->unit_id
                                 || $history->to_unit_id === $user->unit_id;
                          });
 
@@ -444,7 +452,7 @@ class DocumentController extends Controller
             $hasAccess = $document->sender_unit_id === $user->unit_id
                       || $document->receiving_unit_id === $user->unit_id
                       || $document->forwardHistory->contains(function ($history) use ($user) {
-                            return $history->from_unit_id === $user->unit_id 
+                            return $history->from_unit_id === $user->unit_id
                                 || $history->to_unit_id === $user->unit_id;
                          });
 
@@ -477,23 +485,18 @@ class DocumentController extends Controller
             $perPage = 10;
         }
         $selectedUnitId = null;
-        // Make filter units available to all users
         $filterUnits = $user->isAdmin() ? Unit::all() : Unit::visibleToUser($user);
 
-        // Handle unit filtering - persist selection across pages
         if ($request->has('unit_id')) {
             $unitIdInput = $request->input('unit_id');
-            // If empty/0, user selected "all units"
             if ($unitIdInput === '' || $unitIdInput === '0' || $unitIdInput === 0) {
                 $selectedUnitId = null;
                 $request->session()->put('unit_filter', 'all');
             } else {
-                // Specific unit selected
                 $selectedUnitId = (int) $unitIdInput;
                 $request->session()->put('unit_filter', $selectedUnitId);
             }
         } else {
-            // No filter in request, check session
             $sessionFilter = $request->session()->get('unit_filter');
             if ($sessionFilter === 'all') {
                 $selectedUnitId = null;
@@ -515,14 +518,11 @@ class DocumentController extends Controller
             if (!$user->isAdmin()) {
                 $query->where('sender_unit_id', $user->unit_id);
             }
-
-            // "Forwarded" is represented by having forwarding activity.
             $query->whereNotNull('forwarded_at');
         });
 
         if ($selectedUnitId) {
             if ($user->isAdmin()) {
-                // For admins, filter by unit in document or forwarding history
                 $forwardHistoriesQuery->where(function ($query) use ($selectedUnitId) {
                     $query->whereHas('document', function ($docQuery) use ($selectedUnitId) {
                         $docQuery->where('sender_unit_id', $selectedUnitId)
@@ -531,7 +531,6 @@ class DocumentController extends Controller
                       ->orWhere('to_unit_id', $selectedUnitId);
                 });
             } else {
-                // For non-admins, filter by unit in forwarding history (from/to units)
                 $forwardHistoriesQuery->where(function ($query) use ($selectedUnitId) {
                     $query->where('from_unit_id', $selectedUnitId)
                           ->orWhere('to_unit_id', $selectedUnitId);

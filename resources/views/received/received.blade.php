@@ -510,36 +510,22 @@
                         </svg>
                     </button>
 
+                    {{-- Hidden input: always submits the selected type label --}}
                     <input type="hidden" name="document_type" id="doctype-hidden-input">
+                </div>
 
-                    <div
-                        id="doctype-dropdown"
-                        style="
-                            display: none;
-                            position: absolute;
-                            top: calc(100% + 4px);
-                            left: 0;
-                            width: 100%;
-                            background: white;
-                            border: 1px solid #d1d5db;
-                            border-radius: 0.625rem;
-                            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-                            z-index: 99999;
-                            overflow: hidden;
-                            max-height: 220px;
-                            overflow-y: auto;
-                        "
+                {{-- "Others" free-text field — shown only when Others is selected --}}
+                <div id="doctype-others-wrapper" style="display:none; margin-top:0.5rem;">
+                    <input
+                        type="text"
+                        name="document_type_other"
+                        id="doctype-others-input"
+                        placeholder="Please specify document type"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5
+                               focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                               outline-none text-sm transition duration-200 hover:border-gray-400"
                     >
-                        @foreach($documentTypes as $type)
-                            <div
-                                class="doctype-row"
-                                data-value="{{ $type->name }}"
-                                style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
-                            >
-                                {{ $type->name }}
-                            </div>
-                        @endforeach
-                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Please describe the document type</p>
                 </div>
             </div>
 
@@ -720,7 +706,7 @@
                     <p class="text-sm text-gray-800" x-text="selectedDocumentTitle"></p>
                 </div>
 
-                <!-- Forward to Unit — custom picker with flyout -->
+                <!-- Forward to Unit -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                         Forward to Unit <span class="text-red-500">*</span>
@@ -936,6 +922,39 @@
     @endforeach
 </div>
 
+<!-- Doctype Flyout (fixed-position so it escapes modal overflow:auto clipping) -->
+<div id="doctype-flyout" style="
+    display:none;
+    position:fixed;
+    background:white;
+    border:1px solid #d1d5db;
+    border-radius:0.625rem;
+    box-shadow:0 8px 24px rgba(0,0,0,0.12);
+    z-index:999999;
+    overflow:hidden;
+    max-height:220px;
+    overflow-y:auto;
+    min-width:200px;
+">
+    @foreach($documentTypes as $type)
+        <div
+            class="doctype-flyout-item"
+            data-value="{{ $type->name }}"
+            style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
+        >
+            {{ $type->name }}
+        </div>
+    @endforeach
+    {{-- Always append Others at the bottom --}}
+    <div
+        class="doctype-flyout-item"
+        data-value="Others"
+        style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s; border-top:1px solid #f3f4f6;"
+    >
+        Others
+    </div>
+</div>
+
 <style>
     [x-cloak] { display: none !important; }
     @keyframes bounce-in {
@@ -973,30 +992,30 @@
         const isOpen   = dropdown.style.display === 'block';
         dropdown.style.display = isOpen ? 'none' : 'block';
         if (isOpen) { hideFlyout('pau-flyout'); hideFlyout('bgcu-flyout'); }
-        document.getElementById('doctype-dropdown').style.display = 'none';
+        document.getElementById('doctype-flyout').style.display = 'none';
     }
 
-    function selectUnit(id, name) {
-        document.getElementById('filter-unit-hidden-input').value = id;
-        const label = document.getElementById('filter-unit-picker-label');
-        label.textContent = name;
-        label.style.color = id ? '#111827' : '#6b7280';
-        document.getElementById('unit-dropdown').style.display = 'none';
-        hideFlyout('pau-flyout');
-        hideFlyout('bgcu-flyout');
-        // Submit the form to apply the filter
-        document.querySelector('[data-live-search-form]').submit();
-    }
-
-    // ── Upload modal — doctype picker ────────────────────────────────────────
+    // ── Upload modal — doctype picker (fixed flyout) ─────────────────────────
     function toggleDoctypeDropdown(e) {
         e.stopPropagation();
-        const dropdown = document.getElementById('doctype-dropdown');
-        const isOpen   = dropdown.style.display === 'block';
-        dropdown.style.display = isOpen ? 'none' : 'block';
+        const btn    = document.getElementById('doctype-picker-btn');
+        const flyout = document.getElementById('doctype-flyout');
+        const isOpen = flyout.style.display === 'block';
+
         document.getElementById('unit-dropdown').style.display = 'none';
         hideFlyout('pau-flyout');
         hideFlyout('bgcu-flyout');
+
+        if (isOpen) {
+            flyout.style.display = 'none';
+            return;
+        }
+
+        const rect = btn.getBoundingClientRect();
+        flyout.style.width   = rect.width + 'px';
+        flyout.style.top     = (rect.bottom + 4) + 'px';
+        flyout.style.left    = rect.left + 'px';
+        flyout.style.display = 'block';
     }
 
     function selectDoctype(value) {
@@ -1004,7 +1023,32 @@
         const label = document.getElementById('doctype-picker-label');
         label.textContent = value;
         label.style.color = '#111827';
-        document.getElementById('doctype-dropdown').style.display = 'none';
+        document.getElementById('doctype-flyout').style.display = 'none';
+
+        // Show / hide the "Others" free-text field
+        const othersWrapper = document.getElementById('doctype-others-wrapper');
+        const othersInput   = document.getElementById('doctype-others-input');
+        if (value === 'Others') {
+            othersWrapper.style.display = 'block';
+            othersInput.required = true;
+            othersInput.focus();
+        } else {
+            othersWrapper.style.display = 'none';
+            othersInput.required = false;
+            othersInput.value   = '';
+        }
+    }
+
+    // ── Filter bar unit selection ────────────────────────────────────────────
+    function selectFilterUnit(id, name) {
+        document.getElementById('filter-unit-hidden-input').value = id;
+        const label = document.getElementById('filter-unit-picker-label');
+        label.textContent = name;
+        label.style.color = id ? '#111827' : '#6b7280';
+        document.querySelector('[data-filter-unit-menu]').classList.add('is-hidden');
+        hideFlyout('pau-flyout');
+        hideFlyout('bgcu-flyout');
+        document.querySelector('[data-live-search-form]').submit();
     }
 
     // ── Forward modal — unit picker ──────────────────────────────────────────
@@ -1031,7 +1075,6 @@
 
     function selectForwardUnit(id, name) {
         document.getElementById('forward-unit-hidden-input').value = id;
-        // Also update Alpine x-model by dispatching an input event
         const input = document.getElementById('forward-unit-hidden-input');
         input.dispatchEvent(new Event('input', { bubbles: true }));
         const label = document.getElementById('forward-unit-picker-label');
@@ -1045,17 +1088,32 @@
     // ── Init ─────────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
 
-        // Move all flyouts to <body>
-        ['pau-flyout', 'bgcu-flyout', 'fwd-pau-flyout', 'fwd-bgcu-flyout'].forEach(id => {
+        // Move all flyouts to <body> so overflow:hidden on modals never clips them
+        ['pau-flyout', 'bgcu-flyout', 'fwd-pau-flyout', 'fwd-bgcu-flyout', 'doctype-flyout'].forEach(id => {
             const el = document.getElementById(id);
             if (el) document.body.appendChild(el);
         });
 
-        // ── Upload modal flyout items
+        // ── Doctype flyout items ─────────────────────────────────────────────
+        document.querySelectorAll('.doctype-flyout-item').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#f3f4f6');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('click',      () => selectDoctype(item.dataset.value));
+        });
+
+        // ── Upload modal flyout items (PAU / BGCU sub-units) ─────────────────
         document.querySelectorAll('#pau-flyout .flyout-item, #bgcu-flyout .flyout-item').forEach(item => {
             item.addEventListener('mouseenter', () => item.style.background = '#eff6ff');
             item.addEventListener('mouseleave', () => item.style.background = '');
-            item.addEventListener('click', () => selectUnit(item.dataset.unitId, item.dataset.unitName));
+            item.addEventListener('click', () => {
+                document.getElementById('unit-hidden-input').value = item.dataset.unitId;
+                const label = document.getElementById('unit-picker-label');
+                label.textContent = item.dataset.unitName;
+                label.style.color = '#111827';
+                document.getElementById('unit-dropdown').style.display = 'none';
+                hideFlyout('pau-flyout');
+                hideFlyout('bgcu-flyout');
+            });
         });
 
         ['pau-flyout', 'bgcu-flyout'].forEach(id => {
@@ -1064,12 +1122,57 @@
             el.addEventListener('mouseleave', () => hideFlyout(id));
         });
 
-        // ── Filter dropdown option click
+        // ── Filter bar trigger ───────────────────────────────────────────────
+        const filterTrigger = document.querySelector('[data-filter-unit-trigger]');
+        if (filterTrigger) {
+            filterTrigger.addEventListener('click', function (e) {
+                e.stopPropagation();
+                document.querySelector('[data-filter-unit-menu]').classList.toggle('is-hidden');
+            });
+        }
+
+        // ── Filter bar options ───────────────────────────────────────────────
         document.querySelectorAll('[data-filter-unit-option]').forEach(option => {
-            option.addEventListener('click', () => selectUnit(option.dataset.unitId, option.dataset.unitName));
+            option.addEventListener('click', () => selectFilterUnit(option.dataset.unitId, option.dataset.unitName));
         });
 
-        // ── Upload modal unit rows
+        // ── Filter bar flyout hover (PAU/BGCU) ───────────────────────────────
+        document.querySelectorAll('[data-filter-unit-option][data-has-flyout]').forEach(option => {
+            option.addEventListener('mouseenter', () => {
+                const key   = option.dataset.hasFlyout;
+                const other = key === 'pau' ? 'bgcu' : 'pau';
+                hideFlyout(other + '-flyout');
+                clearTimeout(flyoutTimers[key + '-flyout']);
+                const filterFlyout = document.querySelector('[data-filter-flyout="' + key + '"]');
+                const rect = option.getBoundingClientRect();
+                filterFlyout.style.top  = rect.top + 'px';
+                filterFlyout.style.left = (rect.right + 4) + 'px';
+                filterFlyout.style.display = 'block';
+            });
+            option.addEventListener('mouseleave', () => {
+                const key = option.dataset.hasFlyout;
+                flyoutTimers[key + '-flyout'] = setTimeout(() => hideFlyout(key + '-flyout'), 120);
+            });
+        });
+
+        document.querySelectorAll('[data-filter-flyout]').forEach(flyout => {
+            flyout.addEventListener('mouseenter', () => {
+                const key = flyout.dataset.filterFlyout;
+                clearTimeout(flyoutTimers[key + '-flyout']);
+            });
+            flyout.addEventListener('mouseleave', () => {
+                const key = flyout.dataset.filterFlyout;
+                flyoutTimers[key + '-flyout'] = setTimeout(() => hideFlyout(flyout.id), 120);
+            });
+        });
+
+        document.querySelectorAll('[data-filter-flyout-item]').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#eff6ff');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('click', () => selectFilterUnit(item.dataset.unitId, item.dataset.unitName));
+        });
+
+        // ── Upload modal unit rows ───────────────────────────────────────────
         document.querySelectorAll('.unit-row').forEach(row => {
             row.addEventListener('mouseenter', () => {
                 row.style.background = '#f3f4f6';
@@ -1088,17 +1191,18 @@
                 const fk = row.dataset.hasFlyout;
                 if (fk) flyoutTimers[fk + '-flyout'] = setTimeout(() => hideFlyout(fk + '-flyout'), 120);
             });
-            row.addEventListener('click', () => selectUnit(row.dataset.unitId, row.dataset.unitName));
+            row.addEventListener('click', () => {
+                document.getElementById('unit-hidden-input').value = row.dataset.unitId;
+                const label = document.getElementById('unit-picker-label');
+                label.textContent = row.dataset.unitName;
+                label.style.color = '#111827';
+                document.getElementById('unit-dropdown').style.display = 'none';
+                hideFlyout('pau-flyout');
+                hideFlyout('bgcu-flyout');
+            });
         });
 
-        // ── Doctype rows
-        document.querySelectorAll('.doctype-row').forEach(row => {
-            row.addEventListener('mouseenter', () => row.style.background = '#f3f4f6');
-            row.addEventListener('mouseleave', () => row.style.background = '');
-            row.addEventListener('click',      () => selectDoctype(row.dataset.value));
-        });
-
-        // ── Forward modal flyout items
+        // ── Forward modal flyout items ───────────────────────────────────────
         document.querySelectorAll('#fwd-pau-flyout .fwd-flyout-item, #fwd-bgcu-flyout .fwd-flyout-item').forEach(item => {
             item.addEventListener('mouseenter', () => item.style.background = '#eff6ff');
             item.addEventListener('mouseleave', () => item.style.background = '');
@@ -1111,7 +1215,7 @@
             el.addEventListener('mouseleave', () => hideFlyout(id));
         });
 
-        // ── Forward modal unit rows
+        // ── Forward modal unit rows ──────────────────────────────────────────
         document.querySelectorAll('.forward-unit-row').forEach(row => {
             row.addEventListener('mouseenter', () => {
                 row.style.background = '#f3f4f6';
@@ -1133,16 +1237,19 @@
             row.addEventListener('click', () => selectForwardUnit(row.dataset.unitId, row.dataset.unitName));
         });
 
-        // ── Close dropdowns on outside click
+        // ── Close all dropdowns on outside click ─────────────────────────────
         document.addEventListener('click', function (e) {
-            const pauFlyout    = document.getElementById('pau-flyout');
-            const bgcuFlyout   = document.getElementById('bgcu-flyout');
-            const fwdPauFlyout = document.getElementById('fwd-pau-flyout');
-            const fwdBgcuFlyout= document.getElementById('fwd-bgcu-flyout');
+            const doctypeFlyout  = document.getElementById('doctype-flyout');
+            const pauFlyout      = document.getElementById('pau-flyout');
+            const bgcuFlyout     = document.getElementById('bgcu-flyout');
+            const fwdPauFlyout   = document.getElementById('fwd-pau-flyout');
+            const fwdBgcuFlyout  = document.getElementById('fwd-bgcu-flyout');
 
             const unitPicker        = document.getElementById('unit-picker');
             const doctypePicker     = document.getElementById('doctype-picker');
             const forwardUnitPicker = document.getElementById('forward-unit-picker');
+            const filterTriggerEl   = document.querySelector('[data-filter-unit-trigger]');
+            const filterMenu        = document.querySelector('[data-filter-unit-menu]');
 
             if (unitPicker && !unitPicker.contains(e.target) &&
                 !pauFlyout.contains(e.target) && !bgcuFlyout.contains(e.target)) {
@@ -1150,8 +1257,9 @@
                 hideFlyout('pau-flyout');
                 hideFlyout('bgcu-flyout');
             }
-            if (doctypePicker && !doctypePicker.contains(e.target)) {
-                document.getElementById('doctype-dropdown').style.display = 'none';
+            if (!doctypeFlyout.contains(e.target) &&
+                !(doctypePicker && doctypePicker.contains(e.target))) {
+                doctypeFlyout.style.display = 'none';
             }
             if (forwardUnitPicker && !forwardUnitPicker.contains(e.target) &&
                 !fwdPauFlyout.contains(e.target) && !fwdBgcuFlyout.contains(e.target)) {
@@ -1159,9 +1267,13 @@
                 hideFlyout('fwd-pau-flyout');
                 hideFlyout('fwd-bgcu-flyout');
             }
+            if (filterMenu && filterTriggerEl &&
+                !filterMenu.contains(e.target) && !filterTriggerEl.contains(e.target)) {
+                filterMenu.classList.add('is-hidden');
+            }
         });
 
-        // ── Reset upload modal pickers on close
+        // ── Reset upload modal pickers on close ──────────────────────────────
         const uploadBackdrop = document.querySelector('[x-show="open"]');
         if (uploadBackdrop) {
             new MutationObserver(function () {
@@ -1173,23 +1285,27 @@
                     document.getElementById('unit-dropdown').style.display = 'none';
                     hideFlyout('pau-flyout');
                     hideFlyout('bgcu-flyout');
+
                     document.getElementById('doctype-hidden-input').value = '';
                     const dl = document.getElementById('doctype-picker-label');
                     dl.textContent = 'Select document type';
                     dl.style.color = '#6b7280';
-                    document.getElementById('doctype-dropdown').style.display = 'none';
+                    document.getElementById('doctype-flyout').style.display = 'none';
+
+                    // Reset Others field
+                    document.getElementById('doctype-others-wrapper').style.display = 'none';
+                    document.getElementById('doctype-others-input').value   = '';
+                    document.getElementById('doctype-others-input').required = false;
                 }
             }).observe(uploadBackdrop, { attributes: true, attributeFilter: ['style'] });
         }
 
-        // ── Reset forward modal picker on close
+        // ── Reset forward modal picker on close ──────────────────────────────
         const forwardBackdrop = document.querySelector('[x-show="openForward"]');
         if (forwardBackdrop) {
             new MutationObserver(function () {
                 if (forwardBackdrop.style.display === 'none') {
-                    if (forwardBackdrop.dataset.submitting === '1') {
-                        return;
-                    }
+                    if (forwardBackdrop.dataset.submitting === '1') return;
                     document.getElementById('forward-unit-hidden-input').value = '';
                     const fl = document.getElementById('forward-unit-picker-label');
                     fl.textContent = 'Select unit to forward to';

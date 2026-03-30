@@ -43,7 +43,7 @@
                     x-transition:leave-start="opacity-100 scale-100"
                     x-transition:leave-end="opacity-0 scale-90"
                     class="bg-white rounded-3xl shadow-2xl overflow-hidden"
-                    style="width: 500px; max-height: 90vh;"
+                    style="width: 500px; max-height: 90vh; overflow-y: auto;"
                 >
                     <!-- HEADER -->
                     <div class="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-gray-50 to-white">
@@ -109,6 +109,44 @@
                                 <option value="incoming">Incoming Only</option>
                                 <option value="rejected">Rejected Only</option>
                             </select>
+                        </div>
+
+                        <!-- Filter by Document Type -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                Filter by Document Type
+                            </label>
+                            <div id="report-doctype-picker" style="position: relative;">
+                                <button
+                                    type="button"
+                                    id="report-doctype-picker-btn"
+                                    onclick="toggleReportDoctypeDropdown(event)"
+                                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5
+                                           bg-white outline-none text-sm transition duration-200
+                                           hover:border-gray-400 text-left flex items-center justify-between"
+                                    style="color: #6b7280;"
+                                >
+                                    <span id="report-doctype-picker-label">All Types</span>
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                <input type="hidden" name="document_type_filter" id="report-doctype-hidden-input" value="">
+                            </div>
+
+                            {{-- "Others" free-text field for report modal — shown only when Others is selected --}}
+                            <div id="report-doctype-others-wrapper" style="display:none; margin-top:0.5rem;">
+                                <input
+                                    type="text"
+                                    name="document_type_other_filter"
+                                    id="report-doctype-others-input"
+                                    placeholder="Please specify document type"
+                                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5
+                                           focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                           outline-none text-sm transition duration-200 hover:border-gray-400"
+                                >
+                                <p class="text-xs text-gray-500 mt-1">Please describe the document type to filter by</p>
+                            </div>
                         </div>
 
                         <!-- Report Format -->
@@ -637,7 +675,7 @@
                 <p class="text-xs text-gray-500 mt-1">You cannot send to your own unit</p>
             </div>
 
-            <!-- Document Type -->
+            <!-- Document Type (upload modal) -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1.5">
                     Document Type <span class="text-red-500">*</span>
@@ -660,35 +698,20 @@
                     </button>
 
                     <input type="hidden" name="document_type" id="doctype-hidden-input">
+                </div>
 
-                    <div
-                        id="doctype-dropdown"
-                        style="
-                            display: none;
-                            position: absolute;
-                            top: calc(100% + 4px);
-                            left: 0;
-                            width: 100%;
-                            background: white;
-                            border: 1px solid #d1d5db;
-                            border-radius: 0.625rem;
-                            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-                            z-index: 99999;
-                            overflow: hidden;
-                            max-height: 220px;
-                            overflow-y: auto;
-                        "
+                {{-- "Others" free-text field — shown only when Others is selected --}}
+                <div id="doctype-others-wrapper" style="display:none; margin-top:0.5rem;">
+                    <input
+                        type="text"
+                        name="document_type_other"
+                        id="doctype-others-input"
+                        placeholder="Please specify document type"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5
+                               focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                               outline-none text-sm transition duration-200 hover:border-gray-400"
                     >
-                        @foreach($documentTypes as $type)
-                            <div
-                                class="doctype-row"
-                                data-value="{{ $type->name }}"
-                                style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
-                            >
-                                {{ $type->name }}
-                            </div>
-                        @endforeach
-                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Please describe the document type</p>
                 </div>
             </div>
 
@@ -833,6 +856,80 @@
     @endforeach
 </div>
 
+<!-- Doctype Flyout (upload modal — fixed-position to escape modal overflow clipping) -->
+<div id="doctype-flyout" style="
+    display:none;
+    position:fixed;
+    background:white;
+    border:1px solid #d1d5db;
+    border-radius:0.625rem;
+    box-shadow:0 8px 24px rgba(0,0,0,0.12);
+    z-index:999999;
+    overflow:hidden;
+    max-height:220px;
+    overflow-y:auto;
+    min-width:200px;
+">
+    @foreach($documentTypes as $type)
+        <div
+            class="doctype-flyout-item"
+            data-value="{{ $type->name }}"
+            style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
+        >
+            {{ $type->name }}
+        </div>
+    @endforeach
+    {{-- Always append Others at the bottom --}}
+    <div
+        class="doctype-flyout-item"
+        data-value="Others"
+        style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s; border-top:1px solid #f3f4f6;"
+    >
+        Others
+    </div>
+</div>
+
+<!-- Report Doctype Flyout (fixed-position to escape report modal overflow clipping) -->
+<div id="report-doctype-flyout" style="
+    display:none;
+    position:fixed;
+    background:white;
+    border:1px solid #d1d5db;
+    border-radius:0.625rem;
+    box-shadow:0 8px 24px rgba(0,0,0,0.12);
+    z-index:999999;
+    overflow:hidden;
+    max-height:220px;
+    overflow-y:auto;
+    min-width:200px;
+">
+    {{-- "All Types" option at the top --}}
+    <div
+        class="report-doctype-flyout-item"
+        data-value=""
+        style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s; border-bottom:1px solid #f3f4f6;"
+    >
+        All Types
+    </div>
+    @foreach($documentTypes as $type)
+        <div
+            class="report-doctype-flyout-item"
+            data-value="{{ $type->name }}"
+            style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
+        >
+            {{ $type->name }}
+        </div>
+    @endforeach
+    {{-- Always append Others at the bottom --}}
+    <div
+        class="report-doctype-flyout-item"
+        data-value="Others"
+        style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s; border-top:1px solid #f3f4f6;"
+    >
+        Others
+    </div>
+</div>
+
 <style>
     [x-cloak] {
         display: none !important;
@@ -860,19 +957,17 @@
             hideFlyout('pau-flyout');
             hideFlyout('bgcu-flyout');
         }
-        document.getElementById('doctype-dropdown').style.display = 'none';
+        document.getElementById('doctype-flyout').style.display = 'none';
     }
 
     function selectUnit(id, name) {
-        document.getElementById('filter-unit-hidden-input').value = id;
-        const label = document.getElementById('filter-unit-picker-label');
+        document.getElementById('unit-hidden-input').value = id;
+        const label = document.getElementById('unit-picker-label');
         label.textContent = name;
         label.style.color = id ? '#111827' : '#6b7280';
         document.getElementById('unit-dropdown').style.display = 'none';
         hideFlyout('pau-flyout');
         hideFlyout('bgcu-flyout');
-        // Submit the form to apply the filter
-        document.querySelector('[data-live-search-form]').submit();
     }
 
     function hideFlyout(id) {
@@ -881,15 +976,27 @@
         if (el) el.style.display = 'none';
     }
 
-    // ── Doctype picker ───────────────────────────────────────────────────────
+    // ── Upload modal: doctype picker (fixed flyout) ──────────────────────────
     function toggleDoctypeDropdown(e) {
         e.stopPropagation();
-        const dropdown = document.getElementById('doctype-dropdown');
-        const isOpen   = dropdown.style.display === 'block';
-        dropdown.style.display = isOpen ? 'none' : 'block';
+        const btn    = document.getElementById('doctype-picker-btn');
+        const flyout = document.getElementById('doctype-flyout');
+        const isOpen = flyout.style.display === 'block';
+
         document.getElementById('unit-dropdown').style.display = 'none';
         hideFlyout('pau-flyout');
         hideFlyout('bgcu-flyout');
+
+        if (isOpen) {
+            flyout.style.display = 'none';
+            return;
+        }
+
+        const rect = btn.getBoundingClientRect();
+        flyout.style.width  = rect.width + 'px';
+        flyout.style.top    = (rect.bottom + 4) + 'px';
+        flyout.style.left   = rect.left + 'px';
+        flyout.style.display = 'block';
     }
 
     function selectDoctype(value) {
@@ -897,36 +1004,180 @@
         const label       = document.getElementById('doctype-picker-label');
         label.textContent = value;
         label.style.color = '#111827';
-        document.getElementById('doctype-dropdown').style.display = 'none';
+        document.getElementById('doctype-flyout').style.display = 'none';
+
+        // Show / hide the "Others" free-text field
+        const othersWrapper = document.getElementById('doctype-others-wrapper');
+        const othersInput   = document.getElementById('doctype-others-input');
+        if (value === 'Others') {
+            othersWrapper.style.display = 'block';
+            othersInput.required = true;
+            othersInput.focus();
+        } else {
+            othersWrapper.style.display = 'none';
+            othersInput.required = false;
+            othersInput.value   = '';
+        }
+    }
+
+    // ── Report modal: doctype picker (fixed flyout) ──────────────────────────
+    function toggleReportDoctypeDropdown(e) {
+        e.stopPropagation();
+        const btn    = document.getElementById('report-doctype-picker-btn');
+        const flyout = document.getElementById('report-doctype-flyout');
+        const isOpen = flyout.style.display === 'block';
+
+        if (isOpen) {
+            flyout.style.display = 'none';
+            return;
+        }
+
+        const rect = btn.getBoundingClientRect();
+        flyout.style.width  = rect.width + 'px';
+        flyout.style.top    = (rect.bottom + 4) + 'px';
+        flyout.style.left   = rect.left + 'px';
+        flyout.style.display = 'block';
+    }
+
+    function selectReportDoctype(value, label) {
+        document.getElementById('report-doctype-hidden-input').value = value;
+        const labelEl       = document.getElementById('report-doctype-picker-label');
+        labelEl.textContent = label;
+        labelEl.style.color = value === '' ? '#6b7280' : '#111827';
+        document.getElementById('report-doctype-flyout').style.display = 'none';
+
+        // Show / hide the "Others" free-text field in the report modal
+        const othersWrapper = document.getElementById('report-doctype-others-wrapper');
+        const othersInput   = document.getElementById('report-doctype-others-input');
+        if (value === 'Others') {
+            othersWrapper.style.display = 'block';
+            othersInput.focus();
+        } else {
+            othersWrapper.style.display = 'none';
+            othersInput.value = '';
+        }
     }
 
     // ── Init ─────────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
 
-        const pauFlyout  = document.getElementById('pau-flyout');
-        const bgcuFlyout = document.getElementById('bgcu-flyout');
+        const pauFlyout             = document.getElementById('pau-flyout');
+        const bgcuFlyout            = document.getElementById('bgcu-flyout');
+        const doctypeFlyout         = document.getElementById('doctype-flyout');
+        const reportDoctypeFlyout   = document.getElementById('report-doctype-flyout');
+
+        // Move all fixed flyouts to <body> so z-index / overflow is never clipped
         document.body.appendChild(pauFlyout);
         document.body.appendChild(bgcuFlyout);
+        document.body.appendChild(doctypeFlyout);
+        document.body.appendChild(reportDoctypeFlyout);
 
-        // Flyout item hover + click
+        // ── Upload modal: doctype flyout items ───────────────────────────────
+        document.querySelectorAll('.doctype-flyout-item').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#f3f4f6');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('click',      () => selectDoctype(item.dataset.value));
+        });
+
+        // ── Report modal: doctype flyout items ───────────────────────────────
+        document.querySelectorAll('.report-doctype-flyout-item').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#f3f4f6');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('click', () => {
+                const displayLabel = item.dataset.value === '' ? 'All Types' : item.dataset.value;
+                selectReportDoctype(item.dataset.value, displayLabel);
+            });
+        });
+
+        // ── PAU / BGCU flyout items ──────────────────────────────────────────
         document.querySelectorAll('#pau-flyout .flyout-item, #bgcu-flyout .flyout-item').forEach(item => {
             item.addEventListener('mouseenter', () => item.style.background = '#eff6ff');
             item.addEventListener('mouseleave', () => item.style.background = '');
             item.addEventListener('click', () => selectUnit(item.dataset.unitId, item.dataset.unitName));
         });
 
-        // Keep flyout open when mouse is inside it
+        // Keep PAU/BGCU flyouts open while mouse is inside them
         [pauFlyout, bgcuFlyout].forEach(flyout => {
             flyout.addEventListener('mouseenter', () => clearTimeout(flyoutTimers[flyout.id]));
             flyout.addEventListener('mouseleave', () => hideFlyout(flyout.id));
         });
 
-        // Filter dropdown option click
+        // ── Filter bar: trigger button ───────────────────────────────────────
+        const filterTrigger = document.querySelector('[data-filter-unit-trigger]');
+        if (filterTrigger) {
+            filterTrigger.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const menu = document.querySelector('[data-filter-unit-menu]');
+                menu.classList.toggle('is-hidden');
+            });
+        }
+
+        // ── Filter bar: option click ─────────────────────────────────────────
         document.querySelectorAll('[data-filter-unit-option]').forEach(option => {
-            option.addEventListener('click', () => selectUnit(option.dataset.unitId, option.dataset.unitName));
+            option.addEventListener('click', () => {
+                const id   = option.dataset.unitId;
+                const name = option.dataset.unitName;
+                document.getElementById('filter-unit-hidden-input').value = id;
+                const label = document.getElementById('filter-unit-picker-label');
+                label.textContent = name;
+                label.style.color = id ? '#111827' : '#6b7280';
+                document.querySelector('[data-filter-unit-menu]').classList.add('is-hidden');
+                hideFlyout('pau-flyout');
+                hideFlyout('bgcu-flyout');
+                document.querySelector('[data-live-search-form]').submit();
+            });
         });
 
-        // Unit row hover + click
+        // ── Filter bar flyout items ──────────────────────────────────────────
+        document.querySelectorAll('[data-filter-flyout-item]').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#eff6ff');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('click', () => {
+                document.getElementById('filter-unit-hidden-input').value = item.dataset.unitId;
+                const label = document.getElementById('filter-unit-picker-label');
+                label.textContent = item.dataset.unitName;
+                label.style.color = '#111827';
+                document.querySelector('[data-filter-unit-menu]').classList.add('is-hidden');
+                hideFlyout('pau-flyout');
+                hideFlyout('bgcu-flyout');
+                document.querySelector('[data-live-search-form]').submit();
+            });
+        });
+
+        // ── Filter bar option hover → show sub-unit flyouts ──────────────────
+        document.querySelectorAll('[data-filter-unit-option][data-has-flyout]').forEach(option => {
+            option.addEventListener('mouseenter', () => {
+                const flyoutKey = option.dataset.hasFlyout;
+                const other     = flyoutKey === 'pau' ? 'bgcu' : 'pau';
+                hideFlyout(other + '-flyout');
+                clearTimeout(flyoutTimers[flyoutKey + '-flyout']);
+                const filterFlyout = document.querySelector('[data-filter-flyout="' + flyoutKey + '"]');
+                const rect = option.getBoundingClientRect();
+                filterFlyout.style.top  = rect.top + 'px';
+                filterFlyout.style.left = (rect.right + 4) + 'px';
+                filterFlyout.style.display = 'block';
+            });
+            option.addEventListener('mouseleave', () => {
+                const flyoutKey = option.dataset.hasFlyout;
+                flyoutTimers[flyoutKey + '-flyout'] = setTimeout(() => {
+                    hideFlyout(flyoutKey + '-flyout');
+                }, 120);
+            });
+        });
+
+        // Keep filter bar flyouts open while mouse is inside
+        document.querySelectorAll('[data-filter-flyout]').forEach(flyout => {
+            flyout.addEventListener('mouseenter', () => {
+                const key = flyout.dataset.filterFlyout;
+                clearTimeout(flyoutTimers[key + '-flyout']);
+            });
+            flyout.addEventListener('mouseleave', () => {
+                const key = flyout.dataset.filterFlyout;
+                flyoutTimers[key + '-flyout'] = setTimeout(() => hideFlyout(flyout.id || flyout), 120);
+            });
+        });
+
+        // ── Modal unit picker: unit-row hover + click ────────────────────────
         document.querySelectorAll('.unit-row').forEach(row => {
             row.addEventListener('mouseenter', () => {
                 row.style.background = '#f3f4f6';
@@ -949,40 +1200,44 @@
                 row.style.background = '';
                 const flyoutKey = row.dataset.hasFlyout;
                 if (flyoutKey) {
-                    flyoutTimers[flyoutKey + '-flyout'] = setTimeout(() => {
-                        hideFlyout(flyoutKey + '-flyout');
-                    }, 120);
+                    flyoutTimers[flyoutKey + '-flyout'] = setTimeout(() => hideFlyout(flyoutKey + '-flyout'), 120);
                 }
             });
-            // PAU and BGCU are clickable as units themselves
-            row.addEventListener('click', () => {
-                selectUnit(row.dataset.unitId, row.dataset.unitName);
-            });
+            row.addEventListener('click', () => selectUnit(row.dataset.unitId, row.dataset.unitName));
         });
 
-        // Doctype row hover + click
-        document.querySelectorAll('.doctype-row').forEach(row => {
-            row.addEventListener('mouseenter', () => row.style.background = '#f3f4f6');
-            row.addEventListener('mouseleave', () => row.style.background = '');
-            row.addEventListener('click',      () => selectDoctype(row.dataset.value));
-        });
-
-        // Close all dropdowns when clicking outside
+        // ── Close all dropdowns on outside click ─────────────────────────────
         document.addEventListener('click', function (e) {
-            const unitPicker    = document.getElementById('unit-picker');
-            const doctypePicker = document.getElementById('doctype-picker');
+            const unitPicker          = document.getElementById('unit-picker');
+            const doctypePicker       = document.getElementById('doctype-picker');
+            const reportDoctypePicker = document.getElementById('report-doctype-picker');
+
             if (unitPicker && !unitPicker.contains(e.target) &&
                 !pauFlyout.contains(e.target) && !bgcuFlyout.contains(e.target)) {
                 document.getElementById('unit-dropdown').style.display = 'none';
                 hideFlyout('pau-flyout');
                 hideFlyout('bgcu-flyout');
             }
-            if (doctypePicker && !doctypePicker.contains(e.target)) {
-                document.getElementById('doctype-dropdown').style.display = 'none';
+
+            if (!doctypeFlyout.contains(e.target) &&
+                !(doctypePicker && doctypePicker.contains(e.target))) {
+                doctypeFlyout.style.display = 'none';
+            }
+
+            if (!reportDoctypeFlyout.contains(e.target) &&
+                !(reportDoctypePicker && reportDoctypePicker.contains(e.target))) {
+                reportDoctypeFlyout.style.display = 'none';
+            }
+
+            const filterMenu      = document.querySelector('[data-filter-unit-menu]');
+            const filterTriggerEl = document.querySelector('[data-filter-unit-trigger]');
+            if (filterMenu && filterTriggerEl &&
+                !filterMenu.contains(e.target) && !filterTriggerEl.contains(e.target)) {
+                filterMenu.classList.add('is-hidden');
             }
         });
 
-        // Reset both pickers when modal closes
+        // ── Reset upload modal pickers when modal closes ─────────────────────
         const modalBackdrop = document.querySelector('[x-show="open"]');
         if (modalBackdrop) {
             new MutationObserver(function () {
@@ -999,9 +1254,32 @@
                     const doctypeLabel = document.getElementById('doctype-picker-label');
                     doctypeLabel.textContent = 'Select document type';
                     doctypeLabel.style.color = '#6b7280';
-                    document.getElementById('doctype-dropdown').style.display = 'none';
+                    doctypeFlyout.style.display = 'none';
+
+                    // Reset Others field
+                    document.getElementById('doctype-others-wrapper').style.display = 'none';
+                    document.getElementById('doctype-others-input').value   = '';
+                    document.getElementById('doctype-others-input').required = false;
                 }
             }).observe(modalBackdrop, { attributes: true, attributeFilter: ['style'] });
+        }
+
+        // ── Reset report modal doctype picker when report modal closes ────────
+        const reportModalBackdrop = document.querySelector('[x-show="openReportModal"]');
+        if (reportModalBackdrop) {
+            new MutationObserver(function () {
+                if (reportModalBackdrop.style.display === 'none') {
+                    document.getElementById('report-doctype-hidden-input').value = '';
+                    const reportDoctypeLabel = document.getElementById('report-doctype-picker-label');
+                    reportDoctypeLabel.textContent = 'All Types';
+                    reportDoctypeLabel.style.color = '#6b7280';
+                    reportDoctypeFlyout.style.display = 'none';
+
+                    // Reset Others field
+                    document.getElementById('report-doctype-others-wrapper').style.display = 'none';
+                    document.getElementById('report-doctype-others-input').value = '';
+                }
+            }).observe(reportModalBackdrop, { attributes: true, attributeFilter: ['style'] });
         }
     });
 </script>

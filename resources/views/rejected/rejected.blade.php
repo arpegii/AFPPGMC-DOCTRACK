@@ -198,7 +198,7 @@
                             {{ $documents->firstItem() + $loop->index }}
                         </td>
 
-                        {{-- Rejection reason icon — tooltip is JS-rendered into <body> to escape overflow clipping --}}
+                        {{-- Rejection reason icon --}}
                         <td class="px-2 py-4 text-center" style="width:32px;">
                             @if($document->rejection_reason)
                                 <button
@@ -220,7 +220,7 @@
                             {{ $document->document_number }}
                         </td>
 
-                        {{-- Document Title (plain — reason is now in the icon column) --}}
+                        {{-- Document Title --}}
                         <td class="px-6 py-4 text-center font-medium text-slate-800">
                             {{ $document->title }}
                         </td>
@@ -251,7 +251,6 @@
                                         Download
                                     </a>
                                 @endif
-                                {{-- Only the sender unit (or admin) can resubmit --}}
                                 @if(auth()->user()->isAdmin() || auth()->user()->unit_id === $document->sender_unit_id)
                                     <button
                                         type="button"
@@ -291,7 +290,7 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════
-     FLOATING UPLOAD BUTTON + UPLOAD MODAL (unchanged)
+     FLOATING UPLOAD BUTTON + UPLOAD MODAL
      ══════════════════════════════════════════════════════ -->
 <div x-data="{ 
     open: false, 
@@ -470,6 +469,7 @@
                 <p class="text-xs text-gray-500 mt-1">You cannot send to your own unit</p>
             </div>
 
+            <!-- Document Type (upload modal) -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1.5">
                     Document Type <span class="text-red-500">*</span>
@@ -480,11 +480,20 @@
                         <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     <input type="hidden" name="document_type" id="doctype-hidden-input">
-                    <div id="doctype-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;width:100%;background:white;border:1px solid #d1d5db;border-radius:0.625rem;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:99999;overflow:hidden;max-height:220px;overflow-y:auto;">
-                        @foreach($documentTypes as $type)
-                            <div class="doctype-row" data-value="{{ $type->name }}" style="padding:0.6rem 1rem;font-size:0.875rem;color:#374151;cursor:pointer;transition:background 0.15s;">{{ $type->name }}</div>
-                        @endforeach
-                    </div>
+                </div>
+
+                {{-- "Others" free-text field — shown only when Others is selected --}}
+                <div id="doctype-others-wrapper" style="display:none; margin-top:0.5rem;">
+                    <input
+                        type="text"
+                        name="document_type_other"
+                        id="doctype-others-input"
+                        placeholder="Please specify document type"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5
+                               focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                               outline-none text-sm transition duration-200 hover:border-gray-400"
+                    >
+                    <p class="text-xs text-gray-500 mt-1">Please describe the document type</p>
                 </div>
             </div>
 
@@ -561,6 +570,20 @@
                     } else {
                         typeLabel.textContent = 'Select document type';
                         typeLabel.style.color = '#6b7280';
+                    }
+                }
+
+                // Show Others field in resubmit modal if document_type is Others
+                const resubmitOthersWrapper = document.getElementById('resubmit-doctype-others-wrapper');
+                const resubmitOthersInput   = document.getElementById('resubmit-doctype-others-input');
+                if (resubmitOthersWrapper && resubmitOthersInput) {
+                    if (detail.document_type === 'Others') {
+                        resubmitOthersWrapper.style.display = 'block';
+                        resubmitOthersInput.required = true;
+                    } else {
+                        resubmitOthersWrapper.style.display = 'none';
+                        resubmitOthersInput.required = false;
+                        resubmitOthersInput.value = '';
                     }
                 }
             });
@@ -759,11 +782,20 @@
                                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             </button>
                             <input type="hidden" name="document_type" id="resubmit-doctype-hidden-input">
-                            <div id="resubmit-doctype-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;width:100%;background:white;border:1px solid #d1d5db;border-radius:0.625rem;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:99999;overflow:hidden;max-height:220px;overflow-y:auto;">
-                                @foreach($documentTypes as $type)
-                                    <div class="resubmit-doctype-row" data-value="{{ $type->name }}" style="padding:0.6rem 1rem;font-size:0.875rem;color:#374151;cursor:pointer;transition:background 0.15s;">{{ $type->name }}</div>
-                                @endforeach
-                            </div>
+                        </div>
+
+                        {{-- "Others" free-text field for resubmit modal --}}
+                        <div id="resubmit-doctype-others-wrapper" style="display:none; margin-top:0.5rem;">
+                            <input
+                                type="text"
+                                name="document_type_other"
+                                id="resubmit-doctype-others-input"
+                                placeholder="Please specify document type"
+                                class="w-full rounded-lg border border-gray-300 px-3.5 py-2.5
+                                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                       outline-none text-sm transition hover:border-gray-400"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">Please describe the document type</p>
                         </div>
                     </div>
                 </div>
@@ -896,6 +928,71 @@
     @endforeach
 </div>
 
+<!-- Doctype Flyout (fixed-position so it escapes modal overflow:auto clipping) -->
+<div id="doctype-flyout" style="
+    display:none;
+    position:fixed;
+    background:white;
+    border:1px solid #d1d5db;
+    border-radius:0.625rem;
+    box-shadow:0 8px 24px rgba(0,0,0,0.12);
+    z-index:999999;
+    overflow:hidden;
+    max-height:220px;
+    overflow-y:auto;
+    min-width:200px;
+">
+    @foreach($documentTypes as $type)
+        <div
+            class="doctype-flyout-item"
+            data-value="{{ $type->name }}"
+            style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
+        >
+            {{ $type->name }}
+        </div>
+    @endforeach
+    {{-- Always append Others at the bottom --}}
+    <div
+        class="doctype-flyout-item"
+        data-value="Others"
+        style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s; border-top:1px solid #f3f4f6;"
+    >
+        Others
+    </div>
+</div>
+
+<!-- Resubmit Doctype Flyout -->
+<div id="resubmit-doctype-flyout" style="
+    display:none;
+    position:fixed;
+    background:white;
+    border:1px solid #d1d5db;
+    border-radius:0.625rem;
+    box-shadow:0 8px 24px rgba(0,0,0,0.12);
+    z-index:999999;
+    overflow:hidden;
+    max-height:220px;
+    overflow-y:auto;
+    min-width:200px;
+">
+    @foreach($documentTypes as $type)
+        <div
+            class="resubmit-doctype-flyout-item"
+            data-value="{{ $type->name }}"
+            style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
+        >
+            {{ $type->name }}
+        </div>
+    @endforeach
+    {{-- Always append Others at the bottom --}}
+    <div
+        class="resubmit-doctype-flyout-item"
+        data-value="Others"
+        style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s; border-top:1px solid #f3f4f6;"
+    >
+        Others
+    </div>
+</div>
 
 <style>
     [x-cloak] { display: none !important; }
@@ -973,12 +1070,10 @@
         max-height: 140px;
         overflow-y: auto;
     }
-    /* Scrollbar inside tooltip */
     #rejection-tooltip-popup .rtp-body::-webkit-scrollbar { width: 3px; }
     #rejection-tooltip-popup .rtp-body::-webkit-scrollbar-track { background: #fff7f7; }
     #rejection-tooltip-popup .rtp-body::-webkit-scrollbar-thumb { background: #fca5a5; border-radius: 4px; }
 
-    /* Arrow pointing up toward the icon */
     #rejection-tooltip-popup .rtp-arrow {
         position: absolute;
         top: -7px;
@@ -995,9 +1090,8 @@
 <script>
     let flyoutTimers = {};
 
-    /* ── Rejection reason tooltip (body-appended, fixed position) ── */
+    /* ── Rejection reason tooltip ── */
     (function () {
-        // Build the single shared tooltip element once
         const popup = document.createElement('div');
         popup.id = 'rejection-tooltip-popup';
         popup.innerHTML = `
@@ -1019,18 +1113,15 @@
             const reason = btn.dataset.rejection || '';
             popup.querySelector('.rtp-body').textContent = reason;
 
-            // Position: centred below the button
-            const rect   = btn.getBoundingClientRect();
-            const tipW   = 260;
-            let   left   = rect.left + rect.width / 2 - tipW / 2;
-            const top    = rect.bottom + 10;
+            const rect  = btn.getBoundingClientRect();
+            const tipW  = 260;
+            let   left  = rect.left + rect.width / 2 - tipW / 2;
+            const top   = rect.bottom + 10;
 
-            // Keep inside viewport horizontally
             const margin = 8;
             if (left < margin) left = margin;
             if (left + tipW > window.innerWidth - margin) left = window.innerWidth - tipW - margin;
 
-            // Reposition arrow to always point at the button
             const arrowLeft = (rect.left + rect.width / 2) - left;
             popup.querySelector('.rtp-arrow').style.left = Math.max(12, Math.min(tipW - 12, arrowLeft)) + 'px';
             popup.querySelector('.rtp-arrow').style.transform = 'translateX(-50%)';
@@ -1054,42 +1145,50 @@
         });
     })();
 
-    /**
-     * Called by the plain onclick on each Resubmit button.
-     * Fires a native window CustomEvent that the Alpine resubmit
-     * component listens for via @open-resubmit.window.
-     */
     function openResubmitModal(detail) {
         window.dispatchEvent(new CustomEvent('open-resubmit', { detail }));
     }
 
+    // ── Upload modal: unit picker ────────────────────────────────────────────
     function toggleUnitDropdown(e) {
         e.stopPropagation();
         const dropdown = document.getElementById('unit-dropdown');
         const isOpen   = dropdown.style.display === 'block';
         dropdown.style.display = isOpen ? 'none' : 'block';
         if (isOpen) { hideFlyout('pau-flyout'); hideFlyout('bgcu-flyout'); }
-        document.getElementById('doctype-dropdown').style.display = 'none';
+        document.getElementById('doctype-flyout').style.display = 'none';
     }
 
+    // ── Resubmit modal: unit picker ──────────────────────────────────────────
     function toggleResubmitUnitDropdown(e) {
         e.stopPropagation();
         const dropdown = document.getElementById('resubmit-unit-dropdown');
         const isOpen   = dropdown.style.display === 'block';
         dropdown.style.display = isOpen ? 'none' : 'block';
         if (isOpen) { hideFlyout('pau-flyout'); hideFlyout('bgcu-flyout'); }
-        document.getElementById('resubmit-doctype-dropdown').style.display = 'none';
+        document.getElementById('resubmit-doctype-flyout').style.display = 'none';
     }
 
+    // ── FIX: selectUnit now only updates the upload modal picker (no form submit) ──
     function selectUnit(id, name) {
-        document.getElementById('filter-unit-hidden-input').value = id;
-        const label = document.getElementById('filter-unit-picker-label');
+        document.getElementById('unit-hidden-input').value = id;
+        const label = document.getElementById('unit-picker-label');
         label.textContent = name;
         label.style.color = id ? '#111827' : '#6b7280';
         document.getElementById('unit-dropdown').style.display = 'none';
         hideFlyout('pau-flyout');
         hideFlyout('bgcu-flyout');
-        // Submit the form to apply the filter
+    }
+
+    // ── FIX: selectFilterUnit handles the filter bar (updates filter inputs + submits) ──
+    function selectFilterUnit(id, name) {
+        document.getElementById('filter-unit-hidden-input').value = id;
+        const label = document.getElementById('filter-unit-picker-label');
+        label.textContent = name;
+        label.style.color = id ? '#111827' : '#6b7280';
+        document.querySelector('[data-filter-unit-menu]').classList.add('is-hidden');
+        hideFlyout('pau-flyout');
+        hideFlyout('bgcu-flyout');
         document.querySelector('[data-live-search-form]').submit();
     }
 
@@ -1109,24 +1208,44 @@
         if (el) el.style.display = 'none';
     }
 
+    // ── Upload modal: doctype picker (fixed flyout) ──────────────────────────
     function toggleDoctypeDropdown(e) {
         e.stopPropagation();
-        const dropdown = document.getElementById('doctype-dropdown');
-        const isOpen   = dropdown.style.display === 'block';
-        dropdown.style.display = isOpen ? 'none' : 'block';
+        const btn    = document.getElementById('doctype-picker-btn');
+        const flyout = document.getElementById('doctype-flyout');
+        const isOpen = flyout.style.display === 'block';
+
         document.getElementById('unit-dropdown').style.display = 'none';
         hideFlyout('pau-flyout');
         hideFlyout('bgcu-flyout');
+
+        if (isOpen) { flyout.style.display = 'none'; return; }
+
+        const rect = btn.getBoundingClientRect();
+        flyout.style.width  = rect.width + 'px';
+        flyout.style.top    = (rect.bottom + 4) + 'px';
+        flyout.style.left   = rect.left + 'px';
+        flyout.style.display = 'block';
     }
 
+    // ── Resubmit modal: doctype picker (fixed flyout) ────────────────────────
     function toggleResubmitDoctypeDropdown(e) {
         e.stopPropagation();
-        const dropdown = document.getElementById('resubmit-doctype-dropdown');
-        const isOpen   = dropdown.style.display === 'block';
-        dropdown.style.display = isOpen ? 'none' : 'block';
+        const btn    = document.getElementById('resubmit-doctype-picker-btn');
+        const flyout = document.getElementById('resubmit-doctype-flyout');
+        const isOpen = flyout.style.display === 'block';
+
         document.getElementById('resubmit-unit-dropdown').style.display = 'none';
         hideFlyout('pau-flyout');
         hideFlyout('bgcu-flyout');
+
+        if (isOpen) { flyout.style.display = 'none'; return; }
+
+        const rect = btn.getBoundingClientRect();
+        flyout.style.width  = rect.width + 'px';
+        flyout.style.top    = (rect.bottom + 4) + 'px';
+        flyout.style.left   = rect.left + 'px';
+        flyout.style.display = 'block';
     }
 
     function selectDoctype(value) {
@@ -1134,7 +1253,19 @@
         const label = document.getElementById('doctype-picker-label');
         label.textContent = value;
         label.style.color = '#111827';
-        document.getElementById('doctype-dropdown').style.display = 'none';
+        document.getElementById('doctype-flyout').style.display = 'none';
+
+        const othersWrapper = document.getElementById('doctype-others-wrapper');
+        const othersInput   = document.getElementById('doctype-others-input');
+        if (value === 'Others') {
+            othersWrapper.style.display = 'block';
+            othersInput.required = true;
+            othersInput.focus();
+        } else {
+            othersWrapper.style.display = 'none';
+            othersInput.required = false;
+            othersInput.value   = '';
+        }
     }
 
     function selectResubmitDoctype(value) {
@@ -1142,15 +1273,48 @@
         const label = document.getElementById('resubmit-doctype-picker-label');
         label.textContent = value;
         label.style.color = '#111827';
-        document.getElementById('resubmit-doctype-dropdown').style.display = 'none';
+        document.getElementById('resubmit-doctype-flyout').style.display = 'none';
+
+        const othersWrapper = document.getElementById('resubmit-doctype-others-wrapper');
+        const othersInput   = document.getElementById('resubmit-doctype-others-input');
+        if (value === 'Others') {
+            othersWrapper.style.display = 'block';
+            othersInput.required = true;
+            othersInput.focus();
+        } else {
+            othersWrapper.style.display = 'none';
+            othersInput.required = false;
+            othersInput.value   = '';
+        }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        const pauFlyout  = document.getElementById('pau-flyout');
-        const bgcuFlyout = document.getElementById('bgcu-flyout');
+        const pauFlyout             = document.getElementById('pau-flyout');
+        const bgcuFlyout            = document.getElementById('bgcu-flyout');
+        const doctypeFlyout         = document.getElementById('doctype-flyout');
+        const resubmitDoctypeFlyout = document.getElementById('resubmit-doctype-flyout');
+
+        // Move all fixed flyouts to <body>
         document.body.appendChild(pauFlyout);
         document.body.appendChild(bgcuFlyout);
+        document.body.appendChild(doctypeFlyout);
+        document.body.appendChild(resubmitDoctypeFlyout);
 
+        // ── Upload modal doctype flyout items ────────────────────────────────
+        document.querySelectorAll('.doctype-flyout-item').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#f3f4f6');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('click',      () => selectDoctype(item.dataset.value));
+        });
+
+        // ── Resubmit modal doctype flyout items ──────────────────────────────
+        document.querySelectorAll('.resubmit-doctype-flyout-item').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#f3f4f6');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('click',      () => selectResubmitDoctype(item.dataset.value));
+        });
+
+        // ── PAU / BGCU flyout items ──────────────────────────────────────────
         document.querySelectorAll('#pau-flyout .flyout-item, #bgcu-flyout .flyout-item').forEach(item => {
             item.addEventListener('mouseenter', () => item.style.background = '#eff6ff');
             item.addEventListener('mouseleave', () => item.style.background = '');
@@ -1169,11 +1333,59 @@
             flyout.addEventListener('mouseleave', () => hideFlyout(flyout.id));
         });
 
-        // Filter dropdown option click
+        // ── Filter bar: trigger button ───────────────────────────────────────
+        const filterTrigger = document.querySelector('[data-filter-unit-trigger]');
+        if (filterTrigger) {
+            filterTrigger.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const menu = document.querySelector('[data-filter-unit-menu]');
+                menu.classList.toggle('is-hidden');
+            });
+        }
+
+        // ── FIX: Filter bar option click → selectFilterUnit ──────────────────
         document.querySelectorAll('[data-filter-unit-option]').forEach(option => {
-            option.addEventListener('click', () => selectUnit(option.dataset.unitId, option.dataset.unitName));
+            option.addEventListener('click', () => selectFilterUnit(option.dataset.unitId, option.dataset.unitName));
         });
 
+        // ── FIX: Filter bar flyout items → selectFilterUnit ──────────────────
+        document.querySelectorAll('[data-filter-flyout-item]').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#eff6ff');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('click', () => selectFilterUnit(item.dataset.unitId, item.dataset.unitName));
+        });
+
+        // ── Filter bar option hover → sub-unit flyouts ───────────────────────
+        document.querySelectorAll('[data-filter-unit-option][data-has-flyout]').forEach(option => {
+            option.addEventListener('mouseenter', () => {
+                const flyoutKey = option.dataset.hasFlyout;
+                const other     = flyoutKey === 'pau' ? 'bgcu' : 'pau';
+                hideFlyout(other + '-flyout');
+                clearTimeout(flyoutTimers[flyoutKey + '-flyout']);
+                const filterFlyout = document.querySelector('[data-filter-flyout="' + flyoutKey + '"]');
+                const rect = option.getBoundingClientRect();
+                filterFlyout.style.top  = rect.top + 'px';
+                filterFlyout.style.left = (rect.right + 4) + 'px';
+                filterFlyout.style.display = 'block';
+            });
+            option.addEventListener('mouseleave', () => {
+                const flyoutKey = option.dataset.hasFlyout;
+                flyoutTimers[flyoutKey + '-flyout'] = setTimeout(() => hideFlyout(flyoutKey + '-flyout'), 120);
+            });
+        });
+
+        document.querySelectorAll('[data-filter-flyout]').forEach(flyout => {
+            flyout.addEventListener('mouseenter', () => {
+                const key = flyout.dataset.filterFlyout;
+                clearTimeout(flyoutTimers[key + '-flyout']);
+            });
+            flyout.addEventListener('mouseleave', () => {
+                const key = flyout.dataset.filterFlyout;
+                flyoutTimers[key + '-flyout'] = setTimeout(() => hideFlyout(flyout.id || flyout), 120);
+            });
+        });
+
+        // ── Upload modal: unit-row hover + click ─────────────────────────────
         document.querySelectorAll('.unit-row').forEach(row => {
             row.addEventListener('mouseenter', () => {
                 row.style.background = '#f3f4f6';
@@ -1202,6 +1414,7 @@
             row.addEventListener('click', () => selectUnit(row.dataset.unitId, row.dataset.unitName));
         });
 
+        // ── Resubmit modal: unit-row hover + click ───────────────────────────
         document.querySelectorAll('.resubmit-unit-row').forEach(row => {
             row.addEventListener('mouseenter', () => {
                 row.style.background = '#f3f4f6';
@@ -1230,43 +1443,46 @@
             row.addEventListener('click', () => selectResubmitUnit(row.dataset.unitId, row.dataset.unitName));
         });
 
-        document.querySelectorAll('.doctype-row').forEach(row => {
-            row.addEventListener('mouseenter', () => row.style.background = '#f3f4f6');
-            row.addEventListener('mouseleave', () => row.style.background = '');
-            row.addEventListener('click', () => selectDoctype(row.dataset.value));
-        });
-
-        document.querySelectorAll('.resubmit-doctype-row').forEach(row => {
-            row.addEventListener('mouseenter', () => row.style.background = '#f3f4f6');
-            row.addEventListener('mouseleave', () => row.style.background = '');
-            row.addEventListener('click', () => selectResubmitDoctype(row.dataset.value));
-        });
-
+        // ── Close all on outside click ───────────────────────────────────────
         document.addEventListener('click', function (e) {
-            const unitPicker    = document.getElementById('unit-picker');
-            const doctypePicker = document.getElementById('doctype-picker');
+            const unitPicker            = document.getElementById('unit-picker');
+            const doctypePicker         = document.getElementById('doctype-picker');
             const resubmitUnitPicker    = document.getElementById('resubmit-unit-picker');
             const resubmitDoctypePicker = document.getElementById('resubmit-doctype-picker');
+
             if (unitPicker && !unitPicker.contains(e.target) &&
                 !pauFlyout.contains(e.target) && !bgcuFlyout.contains(e.target)) {
                 document.getElementById('unit-dropdown').style.display = 'none';
                 hideFlyout('pau-flyout');
                 hideFlyout('bgcu-flyout');
             }
-            if (doctypePicker && !doctypePicker.contains(e.target)) {
-                document.getElementById('doctype-dropdown').style.display = 'none';
+
+            if (!doctypeFlyout.contains(e.target) &&
+                !(doctypePicker && doctypePicker.contains(e.target))) {
+                doctypeFlyout.style.display = 'none';
             }
+
             if (resubmitUnitPicker && !resubmitUnitPicker.contains(e.target) &&
                 !pauFlyout.contains(e.target) && !bgcuFlyout.contains(e.target)) {
                 document.getElementById('resubmit-unit-dropdown').style.display = 'none';
                 hideFlyout('pau-flyout');
                 hideFlyout('bgcu-flyout');
             }
-            if (resubmitDoctypePicker && !resubmitDoctypePicker.contains(e.target)) {
-                document.getElementById('resubmit-doctype-dropdown').style.display = 'none';
+
+            if (!resubmitDoctypeFlyout.contains(e.target) &&
+                !(resubmitDoctypePicker && resubmitDoctypePicker.contains(e.target))) {
+                resubmitDoctypeFlyout.style.display = 'none';
+            }
+
+            const filterMenu      = document.querySelector('[data-filter-unit-menu]');
+            const filterTriggerEl = document.querySelector('[data-filter-unit-trigger]');
+            if (filterMenu && filterTriggerEl &&
+                !filterMenu.contains(e.target) && !filterTriggerEl.contains(e.target)) {
+                filterMenu.classList.add('is-hidden');
             }
         });
 
+        // ── Reset upload modal pickers when it closes ────────────────────────
         const modalBackdrop = document.querySelector('[x-show="open"]');
         if (modalBackdrop) {
             new MutationObserver(function () {
@@ -1283,18 +1499,23 @@
                     const doctypeLabel = document.getElementById('doctype-picker-label');
                     doctypeLabel.textContent = 'Select document type';
                     doctypeLabel.style.color = '#6b7280';
-                    document.getElementById('doctype-dropdown').style.display = 'none';
+                    doctypeFlyout.style.display = 'none';
+
+                    // Reset Others field
+                    document.getElementById('doctype-others-wrapper').style.display = 'none';
+                    document.getElementById('doctype-others-input').value   = '';
+                    document.getElementById('doctype-others-input').required = false;
                 }
             }).observe(modalBackdrop, { attributes: true, attributeFilter: ['style'] });
         }
 
+        // ── Reset resubmit modal pickers when it closes ──────────────────────
         const resubmitBackdrop = document.getElementById('resubmit-backdrop');
         if (resubmitBackdrop) {
             new MutationObserver(function () {
                 if (resubmitBackdrop.style.display === 'none') {
-                    if (resubmitBackdrop.dataset.submitting === '1') {
-                        return;
-                    }
+                    if (resubmitBackdrop.dataset.submitting === '1') return;
+
                     document.getElementById('resubmit-unit-hidden-input').value = '';
                     const unitLabel = document.getElementById('resubmit-unit-picker-label');
                     unitLabel.textContent = 'Select Receiving Unit';
@@ -1307,7 +1528,12 @@
                     const doctypeLabel = document.getElementById('resubmit-doctype-picker-label');
                     doctypeLabel.textContent = 'Select document type';
                     doctypeLabel.style.color = '#6b7280';
-                    document.getElementById('resubmit-doctype-dropdown').style.display = 'none';
+                    resubmitDoctypeFlyout.style.display = 'none';
+
+                    // Reset Others field
+                    document.getElementById('resubmit-doctype-others-wrapper').style.display = 'none';
+                    document.getElementById('resubmit-doctype-others-input').value   = '';
+                    document.getElementById('resubmit-doctype-others-input').required = false;
                 }
             }).observe(resubmitBackdrop, { attributes: true, attributeFilter: ['style'] });
         }

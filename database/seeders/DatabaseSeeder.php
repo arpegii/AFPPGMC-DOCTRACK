@@ -12,8 +12,8 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            UnitsTableSeeder::class,  // This will create all units including Admin Office
-            // ... your other seeders
+            UnitsTableSeeder::class,      // existing
+            DocumentTypeSeeder::class,   // ✅ add this
         ]);
     }
 }

@@ -519,35 +519,20 @@
                     </button>
 
                     <input type="hidden" name="document_type" id="doctype-hidden-input">
+                </div>
 
-                    <div
-                        id="doctype-dropdown"
-                        style="
-                            display: none;
-                            position: absolute;
-                            top: calc(100% + 4px);
-                            left: 0;
-                            width: 100%;
-                            background: white;
-                            border: 1px solid #d1d5db;
-                            border-radius: 0.625rem;
-                            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-                            z-index: 99999;
-                            overflow: hidden;
-                            max-height: 220px;
-                            overflow-y: auto;
-                        "
+                {{-- "Others" free-text field — shown only when Others is selected --}}
+                <div id="doctype-others-wrapper" style="display:none; margin-top:0.5rem;">
+                    <input
+                        type="text"
+                        name="document_type_other"
+                        id="doctype-others-input"
+                        placeholder="Please specify document type"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5
+                               focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                               outline-none text-sm transition duration-200 hover:border-gray-400"
                     >
-                        @foreach($documentTypes as $type)
-                            <div
-                                class="doctype-row"
-                                data-value="{{ $type->name }}"
-                                style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
-                            >
-                                {{ $type->name }}
-                            </div>
-                        @endforeach
-                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Please describe the document type</p>
                 </div>
             </div>
 
@@ -691,6 +676,39 @@
     @endforeach
 </div>
 
+<!-- Doctype Flyout (fixed-position so it escapes modal overflow:auto clipping) -->
+<div id="doctype-flyout" style="
+    display:none;
+    position:fixed;
+    background:white;
+    border:1px solid #d1d5db;
+    border-radius:0.625rem;
+    box-shadow:0 8px 24px rgba(0,0,0,0.12);
+    z-index:999999;
+    overflow:hidden;
+    max-height:220px;
+    overflow-y:auto;
+    min-width:200px;
+">
+    @foreach($documentTypes as $type)
+        <div
+            class="doctype-flyout-item"
+            data-value="{{ $type->name }}"
+            style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s;"
+        >
+            {{ $type->name }}
+        </div>
+    @endforeach
+    {{-- Always append Others at the bottom --}}
+    <div
+        class="doctype-flyout-item"
+        data-value="Others"
+        style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s; border-top:1px solid #f3f4f6;"
+    >
+        Others
+    </div>
+</div>
+
 <style>
     [x-cloak] {
         display: none !important;
@@ -708,6 +726,50 @@
 <script>
     let flyoutTimers = {};
 
+    // ── Doctype picker (fixed flyout to escape modal overflow clipping) ───────
+    function toggleDoctypeDropdown(e) {
+        e.stopPropagation();
+        const btn    = document.getElementById('doctype-picker-btn');
+        const flyout = document.getElementById('doctype-flyout');
+        const isOpen = flyout.style.display === 'block';
+
+        document.getElementById('unit-dropdown').style.display = 'none';
+        hideFlyout('pau-flyout');
+        hideFlyout('bgcu-flyout');
+
+        if (isOpen) {
+            flyout.style.display = 'none';
+            return;
+        }
+
+        const rect = btn.getBoundingClientRect();
+        flyout.style.width  = rect.width + 'px';
+        flyout.style.top    = (rect.bottom + 4) + 'px';
+        flyout.style.left   = rect.left + 'px';
+        flyout.style.display = 'block';
+    }
+
+    function selectDoctype(value) {
+        document.getElementById('doctype-hidden-input').value = value;
+        const label       = document.getElementById('doctype-picker-label');
+        label.textContent = value;
+        label.style.color = '#111827';
+        document.getElementById('doctype-flyout').style.display = 'none';
+
+        // Show / hide the "Others" free-text field
+        const othersWrapper = document.getElementById('doctype-others-wrapper');
+        const othersInput   = document.getElementById('doctype-others-input');
+        if (value === 'Others') {
+            othersWrapper.style.display = 'block';
+            othersInput.required = true;
+            othersInput.focus();
+        } else {
+            othersWrapper.style.display = 'none';
+            othersInput.required = false;
+            othersInput.value   = '';
+        }
+    }
+
     // ── Unit picker ──────────────────────────────────────────────────────────
     function toggleUnitDropdown(e) {
         e.stopPropagation();
@@ -718,20 +780,17 @@
             hideFlyout('pau-flyout');
             hideFlyout('bgcu-flyout');
         }
-        // Close doctype if open
-        document.getElementById('doctype-dropdown').style.display = 'none';
+        document.getElementById('doctype-flyout').style.display = 'none';
     }
 
     function selectUnit(id, name) {
-        document.getElementById('filter-unit-hidden-input').value = id;
-        const label = document.getElementById('filter-unit-picker-label');
+        document.getElementById('unit-hidden-input').value = id;
+        const label = document.getElementById('unit-picker-label');
         label.textContent = name;
         label.style.color = id ? '#111827' : '#6b7280';
         document.getElementById('unit-dropdown').style.display = 'none';
         hideFlyout('pau-flyout');
         hideFlyout('bgcu-flyout');
-        // Submit the form to apply the filter
-        document.querySelector('[data-live-search-form]').submit();
     }
 
     function hideFlyout(id) {
@@ -740,54 +799,115 @@
         if (el) el.style.display = 'none';
     }
 
-    // ── Doctype picker ───────────────────────────────────────────────────────
-    function toggleDoctypeDropdown(e) {
-        e.stopPropagation();
-        const dropdown = document.getElementById('doctype-dropdown');
-        const isOpen   = dropdown.style.display === 'block';
-        dropdown.style.display = isOpen ? 'none' : 'block';
-        // Close unit dropdown if open
-        document.getElementById('unit-dropdown').style.display = 'none';
-        hideFlyout('pau-flyout');
-        hideFlyout('bgcu-flyout');
-    }
-
-    function selectDoctype(value) {
-        document.getElementById('doctype-hidden-input').value = value;
-        const label       = document.getElementById('doctype-picker-label');
-        label.textContent = value;
-        label.style.color = '#111827';
-        document.getElementById('doctype-dropdown').style.display = 'none';
-    }
-
-    // ── Init on DOM ready ────────────────────────────────────────────────────
+    // ── Init ─────────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
 
-        // Move flyouts to <body> so modal overflow never clips them
-        const pauFlyout  = document.getElementById('pau-flyout');
-        const bgcuFlyout = document.getElementById('bgcu-flyout');
+        const pauFlyout     = document.getElementById('pau-flyout');
+        const bgcuFlyout    = document.getElementById('bgcu-flyout');
+        const doctypeFlyout = document.getElementById('doctype-flyout');
+
+        // Move all fixed flyouts to <body> so z-index / overflow is never clipped
         document.body.appendChild(pauFlyout);
         document.body.appendChild(bgcuFlyout);
+        document.body.appendChild(doctypeFlyout);
 
-        // Flyout item hover + click
+        // ── Doctype flyout items ─────────────────────────────────────────────
+        document.querySelectorAll('.doctype-flyout-item').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#f3f4f6');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('click',      () => selectDoctype(item.dataset.value));
+        });
+
+        // ── PAU / BGCU flyout items ──────────────────────────────────────────
         document.querySelectorAll('#pau-flyout .flyout-item, #bgcu-flyout .flyout-item').forEach(item => {
             item.addEventListener('mouseenter', () => item.style.background = '#eff6ff');
             item.addEventListener('mouseleave', () => item.style.background = '');
             item.addEventListener('click', () => selectUnit(item.dataset.unitId, item.dataset.unitName));
         });
 
-        // Keep flyout open when mouse is inside it
+        // Keep PAU/BGCU flyouts open while mouse is inside them
         [pauFlyout, bgcuFlyout].forEach(flyout => {
             flyout.addEventListener('mouseenter', () => clearTimeout(flyoutTimers[flyout.id]));
             flyout.addEventListener('mouseleave', () => hideFlyout(flyout.id));
         });
 
-        // Filter dropdown option click
+        // ── Filter bar: trigger button ───────────────────────────────────────
+        const filterTrigger = document.querySelector('[data-filter-unit-trigger]');
+        if (filterTrigger) {
+            filterTrigger.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const menu = document.querySelector('[data-filter-unit-menu]');
+                menu.classList.toggle('is-hidden');
+            });
+        }
+
+        // ── Filter bar: option click ─────────────────────────────────────────
         document.querySelectorAll('[data-filter-unit-option]').forEach(option => {
-            option.addEventListener('click', () => selectUnit(option.dataset.unitId, option.dataset.unitName));
+            option.addEventListener('click', () => {
+                const id   = option.dataset.unitId;
+                const name = option.dataset.unitName;
+                document.getElementById('filter-unit-hidden-input').value = id;
+                const label = document.getElementById('filter-unit-picker-label');
+                label.textContent = name;
+                label.style.color = id ? '#111827' : '#6b7280';
+                document.querySelector('[data-filter-unit-menu]').classList.add('is-hidden');
+                hideFlyout('pau-flyout');
+                hideFlyout('bgcu-flyout');
+                document.querySelector('[data-live-search-form]').submit();
+            });
         });
 
-        // Unit row hover + click
+        // ── Filter bar flyout items ──────────────────────────────────────────
+        document.querySelectorAll('[data-filter-flyout-item]').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#eff6ff');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('click', () => {
+                document.getElementById('filter-unit-hidden-input').value = item.dataset.unitId;
+                const label = document.getElementById('filter-unit-picker-label');
+                label.textContent = item.dataset.unitName;
+                label.style.color = '#111827';
+                document.querySelector('[data-filter-unit-menu]').classList.add('is-hidden');
+                hideFlyout('pau-flyout');
+                hideFlyout('bgcu-flyout');
+                document.querySelector('[data-live-search-form]').submit();
+            });
+        });
+
+        // ── Filter bar option hover → show sub-unit flyouts ──────────────────
+        document.querySelectorAll('[data-filter-unit-option][data-has-flyout]').forEach(option => {
+            option.addEventListener('mouseenter', () => {
+                const flyoutKey = option.dataset.hasFlyout;
+                const other     = flyoutKey === 'pau' ? 'bgcu' : 'pau';
+                hideFlyout(other + '-flyout');
+                clearTimeout(flyoutTimers[flyoutKey + '-flyout']);
+
+                const filterFlyout = document.querySelector('[data-filter-flyout="' + flyoutKey + '"]');
+                const rect = option.getBoundingClientRect();
+                filterFlyout.style.top  = rect.top + 'px';
+                filterFlyout.style.left = (rect.right + 4) + 'px';
+                filterFlyout.style.display = 'block';
+            });
+            option.addEventListener('mouseleave', () => {
+                const flyoutKey = option.dataset.hasFlyout;
+                flyoutTimers[flyoutKey + '-flyout'] = setTimeout(() => {
+                    hideFlyout(flyoutKey + '-flyout');
+                }, 120);
+            });
+        });
+
+        // Keep filter bar flyouts open while mouse is inside
+        document.querySelectorAll('[data-filter-flyout]').forEach(flyout => {
+            flyout.addEventListener('mouseenter', () => {
+                const key = flyout.dataset.filterFlyout;
+                clearTimeout(flyoutTimers[key + '-flyout']);
+            });
+            flyout.addEventListener('mouseleave', () => {
+                const key = flyout.dataset.filterFlyout;
+                flyoutTimers[key + '-flyout'] = setTimeout(() => hideFlyout(flyout.id || flyout), 120);
+            });
+        });
+
+        // ── Modal unit picker: unit-row hover + click ────────────────────────
         document.querySelectorAll('.unit-row').forEach(row => {
             row.addEventListener('mouseenter', () => {
                 row.style.background = '#f3f4f6';
@@ -810,24 +930,13 @@
                 row.style.background = '';
                 const flyoutKey = row.dataset.hasFlyout;
                 if (flyoutKey) {
-                    flyoutTimers[flyoutKey + '-flyout'] = setTimeout(() => {
-                        hideFlyout(flyoutKey + '-flyout');
-                    }, 120);
+                    flyoutTimers[flyoutKey + '-flyout'] = setTimeout(() => hideFlyout(flyoutKey + '-flyout'), 120);
                 }
             });
-row.addEventListener('click', () => {
-    selectUnit(row.dataset.unitId, row.dataset.unitName);
-});
+            row.addEventListener('click', () => selectUnit(row.dataset.unitId, row.dataset.unitName));
         });
 
-        // Doctype row hover + click
-        document.querySelectorAll('.doctype-row').forEach(row => {
-            row.addEventListener('mouseenter', () => row.style.background = '#f3f4f6');
-            row.addEventListener('mouseleave', () => row.style.background = '');
-            row.addEventListener('click',      () => selectDoctype(row.dataset.value));
-        });
-
-        // Close all dropdowns when clicking outside
+        // ── Close all dropdowns on outside click ─────────────────────────────
         document.addEventListener('click', function (e) {
             const unitPicker    = document.getElementById('unit-picker');
             const doctypePicker = document.getElementById('doctype-picker');
@@ -838,17 +947,26 @@ row.addEventListener('click', () => {
                 hideFlyout('pau-flyout');
                 hideFlyout('bgcu-flyout');
             }
-            if (doctypePicker && !doctypePicker.contains(e.target)) {
-                document.getElementById('doctype-dropdown').style.display = 'none';
+
+            if (!doctypeFlyout.contains(e.target) &&
+                !(doctypePicker && doctypePicker.contains(e.target))) {
+                doctypeFlyout.style.display = 'none';
+            }
+
+            const filterMenu      = document.querySelector('[data-filter-unit-menu]');
+            const filterTriggerEl = document.querySelector('[data-filter-unit-trigger]');
+            if (filterMenu && filterTriggerEl &&
+                !filterMenu.contains(e.target) && !filterTriggerEl.contains(e.target)) {
+                filterMenu.classList.add('is-hidden');
             }
         });
 
-        // Reset both pickers when modal closes
+        // ── Reset modal pickers when modal closes ────────────────────────────
         const modalBackdrop = document.querySelector('[x-show="open"]');
         if (modalBackdrop) {
             new MutationObserver(function () {
                 if (modalBackdrop.style.display === 'none') {
-                    // Unit picker
+                    // Reset unit picker
                     document.getElementById('unit-hidden-input').value = '';
                     const unitLabel = document.getElementById('unit-picker-label');
                     unitLabel.textContent = 'Select Receiving Unit';
@@ -856,12 +974,18 @@ row.addEventListener('click', () => {
                     document.getElementById('unit-dropdown').style.display = 'none';
                     hideFlyout('pau-flyout');
                     hideFlyout('bgcu-flyout');
-                    // Doctype picker
+
+                    // Reset doctype picker
                     document.getElementById('doctype-hidden-input').value = '';
                     const doctypeLabel = document.getElementById('doctype-picker-label');
                     doctypeLabel.textContent = 'Select document type';
                     doctypeLabel.style.color = '#6b7280';
-                    document.getElementById('doctype-dropdown').style.display = 'none';
+                    doctypeFlyout.style.display = 'none';
+
+                    // Reset Others field
+                    document.getElementById('doctype-others-wrapper').style.display = 'none';
+                    document.getElementById('doctype-others-input').value   = '';
+                    document.getElementById('doctype-others-input').required = false;
                 }
             }).observe(modalBackdrop, { attributes: true, attributeFilter: ['style'] });
         }
